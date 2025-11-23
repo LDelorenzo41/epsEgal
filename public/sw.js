@@ -1,50 +1,61 @@
-// Service Worker pour EPS Égalité
-// Version simple pour cache des assets principaux
-
+// Service Worker pour EPS Égalité - Version corrigée
 const CACHE_NAME = 'eps-egal-v1';
 const urlsToCache = [
   '/',
-  '/dashboard',
-  '/etablissement',
-  '/perso',
-  '/stats/perso',
-  '/stats/etablissement',
 ];
 
-// Installation du service worker
+// Installation
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Cache ouvert');
       return cache.addAll(urlsToCache);
     })
   );
+  self.skipWaiting();
 });
 
-// Activation du service worker
+// Activation
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Suppression ancien cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
+  self.clients.claim();
 });
 
-// Stratégie de cache: Network First, fallback to cache
+// Fetch - Ne cache que les GET requests
 self.addEventListener('fetch', (event) => {
+  // Ignorer les requêtes non-GET (POST, PUT, etc.)
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Ignorer les requêtes vers manifest.json pour éviter les erreurs CORS
+  if (event.request.url.includes('manifest.json')) {
+    return;
+  }
+
+  // Ignorer les requêtes vers Supabase
+  if (event.request.url.includes('supabase.co')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clone la réponse
-        const responseToCache = response.clone();
+        // Ne cacher que les réponses valides
+        if (!response || response.status !== 200 || response.type === 'error') {
+          return response;
+        }
 
+        const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);
         });
@@ -52,7 +63,6 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Si le réseau échoue, on cherche dans le cache
         return caches.match(event.request);
       })
   );

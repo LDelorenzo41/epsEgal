@@ -81,14 +81,15 @@ export function PersoManager({
   const [activities, setActivities] = useState<ClassActivity[]>(initialActivities)
   const [showActivityForm, setShowActivityForm] = useState(false)
   const [activityForm, setActivityForm] = useState({
-    id: "",
-    teacher_class_id: "",
-    apsa_id: "",
-    period: "",
-    avg_score_total: "",
-    avg_score_girls: "",
-    avg_score_boys: "",
-  })
+  id: "",
+  teacher_class_id: "",
+  apsa_id: "",
+  period: "",
+  school_year: "2025-26", // AJOUTE CETTE LIGNE
+  avg_score_total: "",
+  avg_score_girls: "",
+  avg_score_boys: "",
+})
 
   // ===== TEACHER CLASSES CRUD =====
 
@@ -183,12 +184,13 @@ export function PersoManager({
     }
 
     const data = {
-      teacher_class_id: activityForm.teacher_class_id,
-      apsa_id: activityForm.apsa_id,
-      period: activityForm.period || null,
-      avg_score_total: activityForm.avg_score_total
-        ? parseFloat(activityForm.avg_score_total)
-        : null,
+  teacher_class_id: activityForm.teacher_class_id,
+  apsa_id: activityForm.apsa_id,
+  period: activityForm.period || null,
+  school_year: activityForm.school_year || "2025-26", // AJOUTE CETTE LIGNE
+  avg_score_total: activityForm.avg_score_total
+    ? parseFloat(activityForm.avg_score_total)
+    : null,
       avg_score_girls: activityForm.avg_score_girls
         ? parseFloat(activityForm.avg_score_girls)
         : null,
@@ -539,6 +541,27 @@ export function PersoManager({
                     />
                   </div>
                   <div>
+                    {/* AJOUTE CE NOUVEAU CHAMP JUSTE APRÈS */}
+<div>
+  <Label htmlFor="activity-year">Année scolaire</Label>
+  <Select
+    value={activityForm.school_year || "2025-26"}
+    onValueChange={(value) =>
+      setActivityForm({ ...activityForm, school_year: value })
+    }
+  >
+    <SelectTrigger id="activity-year">
+      <SelectValue placeholder="Sélectionner l'année" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="2023-24">2023-24</SelectItem>
+      <SelectItem value="2024-25">2024-25</SelectItem>
+      <SelectItem value="2025-26">2025-26 (actuelle)</SelectItem>
+      <SelectItem value="2026-27">2026-27</SelectItem>
+      <SelectItem value="2027-28">2027-28</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
                     <Label htmlFor="avg-girls">Moyenne Filles</Label>
                     <Input
                       id="avg-girls"

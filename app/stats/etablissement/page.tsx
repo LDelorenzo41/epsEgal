@@ -8,7 +8,7 @@ import { NavBar } from "@/components/nav-bar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { SchoolYearSelector } from "@/components/school-year-selector"
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
@@ -28,6 +28,17 @@ export default function StatsEtablissementPage() {
   const [chartData, setChartData] = useState([])
   const [pieChartData, setPieChartData] = useState([])
   const [schoolYear, setSchoolYear] = useState("2025-26")
+
+  // Nouveaux états pour les analyses supplémentaires
+  const [genderAnalysis, setGenderAnalysis] = useState({
+    male: { activities: [], avgDiff: 0 },
+    female: { activities: [], avgDiff: 0 },
+  })
+  const [classAnalysis, setClassAnalysis] = useState({
+    girlMajority: { classes: [], avgDiff: 0 },
+    boyMajority: { classes: [], avgDiff: 0 },
+    balanced: { classes: [], avgDiff: 0 },
+  })
 
   const supabase = createClient()
   const router = useRouter()
@@ -64,6 +75,7 @@ export default function StatsEtablissementPage() {
           *,
           teacher_classes!inner (
             teacher_id,
+            class_id,
             classes!inner (
               establishment_id,
               name
@@ -84,9 +96,11 @@ export default function StatsEtablissementPage() {
         .not("avg_score_boys", "is", null)
 
       if (allActivities && allActivities.length > 0) {
-        const totalActivities = allActivities.length
+        // Exclure CP5 des activités
+        const filteredActivities = allActivities.filter((a) => a.apsa?.cp?.code !== "CP5")
+        const totalActivities = filteredActivities.length
 
-        const diffs = allActivities.map((a) => {
+        const diffs = filteredActivities.map((a) => {
           const diff = (a.avg_score_girls || 0) - (a.avg_score_boys || 0)
           return diff
         })
@@ -94,9 +108,9 @@ export default function StatsEtablissementPage() {
         const avgDiffGlobal = diffs.reduce((sum, diff) => sum + Math.abs(diff), 0) / diffs.length
 
         const activitiesByCP = {}
-        allActivities.forEach((activity) => {
+        filteredActivities.forEach((activity) => {
           const cpCode = activity.apsa?.cp?.code
-          if (cpCode) {
+          if (cpCode && cpCode !== "CP5") {
             if (!activitiesByCP[cpCode]) {
               activitiesByCP[cpCode] = []
             }
@@ -104,7 +118,7 @@ export default function StatsEtablissementPage() {
           }
         })
 
-        const totalCPs = 5
+        const totalCPs = 4 // Collège = CP1 à CP4 (CP5 exclue)
         const coveredCPs = Object.keys(activitiesByCP).length
         const cpCoverage = {
           covered: coveredCPs,
@@ -112,7 +126,7 @@ export default function StatsEtablissementPage() {
           percentage: (coveredCPs / totalCPs) * 100,
         }
 
-        const allCPsCovered = coveredCPs === totalCPs
+        const allCPsCovered = coveredCPs === 4
         const lowDiff = avgDiffGlobal < 0.5
 
         let label = "À renforcer"
@@ -123,7 +137,7 @@ export default function StatsEtablissementPage() {
           label = "Équilibré"
           labelColor = "text-green-700"
           labelBg = "bg-green-100"
-        } else if (coveredCPs >= 4 || avgDiffGlobal < 1) {
+        } else if (coveredCPs >= 3 || avgDiffGlobal < 1) {
           label = "En progrès"
           labelColor = "text-yellow-700"
           labelBg = "bg-yellow-100"
@@ -160,11 +174,107 @@ export default function StatsEtablissementPage() {
           value: cpActivities.length,
         }))
         setPieChartData(pieData)
+
+        // --- DEBUT ANALYSE SUPPLEMENTAIRE ---
+
+        // Analyse par sexe du professeur
+        const teacherProfiles = await supabase
+          .from("profiles")
+          .select("id, gender")
+          .eq("establishment_id", profileData.establishment_id)
+          .not("gender", "is", null)
+
+        const localGenderAnalysis = {
+          male: { activities: [], avgDiff: 0 },
+          female: { activities: [], avgDiff: 0 },
+        }
+
+        if (teacherProfiles.data) {
+          filteredActivities.forEach((activity) => {
+            const teacher = teacherProfiles.data.find(
+              (p) => p.id === activity.teacher_classes?.teacher_id
+            )
+            if (teacher?.gender === "male" || teacher?.gender === "female") {
+              localGenderAnalysis[teacher.gender].activities.push(activity)
+            }
+          })
+
+          // Calculer les moyennes
+          if (localGenderAnalysis.male.activities.length > 0) {
+            const diffs = localGenderAnalysis.male.activities.map((a) =>
+              Math.abs((a.avg_score_girls || 0) - (a.avg_score_boys || 0))
+            )
+            localGenderAnalysis.male.avgDiff = diffs.reduce((sum, d) => sum + d, 0) / diffs.length
+          }
+
+          if (localGenderAnalysis.female.activities.length > 0) {
+            const diffs = localGenderAnalysis.female.activities.map((a) =>
+              Math.abs((a.avg_score_girls || 0) - (a.avg_score_boys || 0))
+            )
+            localGenderAnalysis.female.avgDiff = diffs.reduce((sum, d) => sum + d, 0) / diffs.length
+          }
+          setGenderAnalysis(localGenderAnalysis)
+        }
+
+        // Analyse répartition F/G dans les classes
+        const classData = await supabase
+          .from("classes")
+          .select("id, nb_students_girls, nb_students_boys")
+          .eq("establishment_id", profileData.establishment_id)
+          .not("nb_students_girls", "is", null)
+          .not("nb_students_boys", "is", null)
+
+        const localClassAnalysis = {
+          girlMajority: { classes: [], avgDiff: 0 },
+          boyMajority: { classes: [], avgDiff: 0 },
+          balanced: { classes: [], avgDiff: 0 },
+        }
+
+        if (classData.data) {
+          classData.data.forEach((classe) => {
+            const girls = classe.nb_students_girls || 0
+            const boys = classe.nb_students_boys || 0
+            const total = girls + boys
+            if (total === 0) return
+
+            const girlsPercent = (girls / total) * 100
+
+            let category
+            if (girlsPercent > 60) category = "girlMajority"
+            else if (girlsPercent < 40) category = "boyMajority"
+            else category = "balanced"
+
+            const classActivities = filteredActivities.filter(
+              (a) => a.teacher_classes?.class_id === classe.id
+            )
+
+            classActivities.forEach((a) => {
+              localClassAnalysis[category].classes.push({
+                ...classe,
+                activity: a,
+                diff: Math.abs((a.avg_score_girls || 0) - (a.avg_score_boys || 0)),
+              })
+            })
+          })
+
+          // Calculer moyennes
+          Object.keys(localClassAnalysis).forEach((key) => {
+            if (localClassAnalysis[key].classes.length > 0) {
+              const avgDiff =
+                localClassAnalysis[key].classes.reduce((sum, c) => sum + c.diff, 0) /
+                localClassAnalysis[key].classes.length
+              localClassAnalysis[key].avgDiff = avgDiff
+            }
+          })
+          setClassAnalysis(localClassAnalysis)
+        }
+        // --- FIN ANALYSE SUPPLEMENTAIRE ---
+
       } else {
         setStats({
           totalActivities: 0,
           avgDiffGlobal: 0,
-          cpCoverage: { covered: 0, total: 5, percentage: 0 },
+          cpCoverage: { covered: 0, total: 4, percentage: 0 },
           activitiesByCP: {},
           label: "Non calculé",
           labelColor: "text-gray-600",
@@ -172,6 +282,15 @@ export default function StatsEtablissementPage() {
         })
         setChartData([])
         setPieChartData([])
+        setGenderAnalysis({
+          male: { activities: [], avgDiff: 0 },
+          female: { activities: [], avgDiff: 0 },
+        })
+        setClassAnalysis({
+          girlMajority: { classes: [], avgDiff: 0 },
+          boyMajority: { classes: [], avgDiff: 0 },
+          balanced: { classes: [], avgDiff: 0 },
+        })
       }
     } catch (error) {
       console.error("Error loading data:", error)
@@ -202,7 +321,7 @@ export default function StatsEtablissementPage() {
               Statistiques Établissement
             </h1>
             <p className="text-gray-600">
-              {profile?.establishments?.name}
+              {profile?.establishments?.name} - Niveau Collège (CP1 à CP4)
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -220,6 +339,9 @@ export default function StatsEtablissementPage() {
                 <CardTitle className="text-center text-2xl">
                   Label Égalité - Année {schoolYear}
                 </CardTitle>
+                <CardDescription className="text-center">
+                  Niveau Collège (CP1 à CP4 - CP5 exclue)
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className={`${stats.labelBg} rounded-lg p-8 text-center border-2`}>
@@ -231,7 +353,7 @@ export default function StatsEtablissementPage() {
                       <p>
                         Félicitations ! Votre établissement présente un bon équilibre
                         entre les moyennes Filles/Garçons et couvre l'ensemble des
-                        compétences propres.
+                        compétences propres du collège (CP1 à CP4).
                       </p>
                     )}
                     {stats.label === "En progrès" && (
@@ -265,7 +387,7 @@ export default function StatsEtablissementPage() {
                     {stats.totalActivities}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Total établissement
+                    Total établissement (CP5 exclue)
                   </p>
                 </CardContent>
               </Card>
@@ -297,7 +419,7 @@ export default function StatsEtablissementPage() {
                     {stats.cpCoverage.covered} / {stats.cpCoverage.total}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {stats.cpCoverage.percentage.toFixed(0)}% des CP travaillées
+                    {stats.cpCoverage.percentage.toFixed(0)}% des CP travaillées (Collège)
                   </p>
                 </CardContent>
               </Card>
@@ -308,7 +430,7 @@ export default function StatsEtablissementPage() {
               <CardHeader>
                 <CardTitle>Comparaison Filles/Garçons par CP</CardTitle>
                 <CardDescription>
-                  Moyennes comparées pour chaque compétence propre
+                  Moyennes comparées pour chaque compétence propre (CP1 à CP4)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -332,7 +454,7 @@ export default function StatsEtablissementPage() {
                 <CardHeader>
                   <CardTitle>Répartition des activités</CardTitle>
                   <CardDescription>
-                    Nombre d'activités par CP
+                    Nombre d'activités par CP (CP5 exclue)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -380,11 +502,11 @@ export default function StatsEtablissementPage() {
               </Card>
             </div>
 
-            <Card>
+            <Card className="mb-8">
               <CardHeader>
                 <CardTitle>Analyse par Compétence Propre</CardTitle>
                 <CardDescription>
-                  Écarts moyens Filles/Garçons par CP
+                  Écarts moyens Filles/Garçons par CP (Collège - CP1 à CP4)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -445,15 +567,121 @@ export default function StatsEtablissementPage() {
                     )
                   })}
 
-                  {stats.cpCoverage.covered < 5 && (
+                  {stats.cpCoverage.covered < 4 && (
                     <div className="border-2 border-dashed border-yellow-300 rounded-lg p-4 bg-yellow-50">
                       <div className="text-sm text-yellow-800">
                         <strong>CP non couvertes :</strong> Il manque{" "}
-                        {5 - stats.cpCoverage.covered} CP pour une couverture
-                        complète.
+                        {4 - stats.cpCoverage.covered} CP pour une couverture
+                        complète (Collège - CP1 à CP4).
                       </div>
                     </div>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Analyse par sexe du professeur */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Influence du sexe du professeur</CardTitle>
+                <CardDescription>
+                  Analyse comparative des écarts F/G selon le sexe de l'enseignant
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="border rounded-lg p-4 bg-blue-50">
+                    <h3 className="font-semibold text-blue-900 mb-3">
+                      Professeurs hommes
+                    </h3>
+                    <div className="text-4xl font-bold text-blue-600">
+                      {genderAnalysis.male.avgDiff.toFixed(2)}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Écart moyen sur {genderAnalysis.male.activities.length} activité(s)
+                    </p>
+                  </div>
+
+                  <div className="border rounded-lg p-4 bg-pink-50">
+                    <h3 className="font-semibold text-pink-900 mb-3">
+                      Professeures femmes
+                    </h3>
+                    <div className="text-4xl font-bold text-pink-600">
+                      {genderAnalysis.female.avgDiff.toFixed(2)}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Écart moyen sur {genderAnalysis.female.activities.length} activité(s)
+                    </p>
+                  </div>
+                </div>
+                {genderAnalysis.male.activities.length > 0 && genderAnalysis.female.activities.length > 0 && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      <strong>Analyse :</strong>{" "}
+                      {genderAnalysis.male.avgDiff < genderAnalysis.female.avgDiff
+                        ? "Les professeurs hommes obtiennent des écarts légèrement plus faibles que les professeures femmes."
+                        : genderAnalysis.male.avgDiff > genderAnalysis.female.avgDiff
+                        ? "Les professeures femmes obtiennent des écarts légèrement plus faibles que les professeurs hommes."
+                        : "Les écarts sont similaires entre professeurs hommes et femmes."}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Analyse répartition F/G dans les classes */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Influence de la répartition Filles/Garçons</CardTitle>
+                <CardDescription>
+                  Impact de la composition des classes sur les écarts de moyennes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="border rounded-lg p-4 bg-pink-50">
+                    <h3 className="font-semibold text-pink-900 mb-2 text-sm">
+                      Majorité de filles ({">"}60%)
+                    </h3>
+                    <div className="text-3xl font-bold text-pink-600">
+                      {classAnalysis.girlMajority.avgDiff.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {classAnalysis.girlMajority.classes.length} données
+                    </p>
+                  </div>
+
+                  <div className="border rounded-lg p-4 bg-green-50">
+                    <h3 className="font-semibold text-green-900 mb-2 text-sm">
+                      Équilibrée (40-60%)
+                    </h3>
+                    <div className="text-3xl font-bold text-green-600">
+                      {classAnalysis.balanced.avgDiff.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {classAnalysis.balanced.classes.length} données
+                    </p>
+                  </div>
+
+                  <div className="border rounded-lg p-4 bg-blue-50">
+                    <h3 className="font-semibold text-blue-900 mb-2 text-sm">
+                      Majorité de garçons ({">"}60%)
+                    </h3>
+                    <div className="text-3xl font-bold text-blue-600">
+                      {classAnalysis.boyMajority.avgDiff.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {classAnalysis.boyMajority.classes.length} données
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    <strong>Analyse :</strong> Les classes équilibrées tendent à présenter
+                    {classAnalysis.balanced.avgDiff < Math.min(classAnalysis.girlMajority.avgDiff, classAnalysis.boyMajority.avgDiff)
+                      ? " les écarts les plus faibles"
+                      : " des écarts comparables aux autres configurations"}.
+                  </p>
                 </div>
               </CardContent>
             </Card>

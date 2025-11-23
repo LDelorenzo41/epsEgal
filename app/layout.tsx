@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
@@ -10,12 +10,13 @@ export const metadata: Metadata = {
   title: "EPS Égalité - État des lieux de l'égalité Filles/Garçons en EPS",
   description: "Application SaaS pour les équipes EPS des établissements scolaires",
   manifest: "/manifest.json",
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: "#2563eb",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
 }
 
 export default function RootLayout({

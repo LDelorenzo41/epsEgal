@@ -1,18 +1,18 @@
-import type { Metadata, Viewport } from "next"
+import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
-import { PWARegister } from "@/components/pwa-register"
+import { Footer } from "@/components/footer"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "EPS Égalité - État des lieux de l'égalité Filles/Garçons en EPS",
-  description: "Application SaaS pour les équipes EPS des établissements scolaires",
+  title: "EPS Égalité",
+  description: "Application de suivi de l'égalité filles-garçons en EPS",
   manifest: "/manifest.json",
 }
 
-export const viewport: Viewport = {
+export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -26,14 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
-      </head>
-      <body className={inter.className}>
-        {children}
+      <body className={`${inter.className} flex flex-col min-h-screen`}>
+        <div className="flex-1">{children}</div>
+        <Footer />
         <Toaster />
-        <PWARegister />
       </body>
     </html>
   )

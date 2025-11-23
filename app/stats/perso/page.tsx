@@ -23,6 +23,9 @@ export default function StatsPersoPage() {
     avgDiffGlobal: 0,
     cpCoverage: {},
     activitiesByCP: {},
+    personalLabel: "Non calculé",
+    personalLabelColor: "text-gray-600",
+    personalLabelBg: "bg-gray-100",
   })
   const [chartData, setChartData] = useState([])
   const [trendData, setTrendData] = useState([])
@@ -83,11 +86,13 @@ export default function StatsPersoPage() {
         .not("avg_score_boys", "is", null)
 
       if (activitiesData && activitiesData.length > 0) {
-        setActivities(activitiesData)
+        // Exclure CP5 des activités
+        const filteredActivities = activitiesData.filter((a) => a.apsa?.cp?.code !== "CP5")
+        setActivities(filteredActivities)
 
-        const totalActivities = activitiesData.length
+        const totalActivities = filteredActivities.length
 
-        const diffs = activitiesData.map((a) => {
+        const diffs = filteredActivities.map((a) => {
           const diff = (a.avg_score_girls || 0) - (a.avg_score_boys || 0)
           return diff
         })
@@ -95,9 +100,9 @@ export default function StatsPersoPage() {
         const avgDiffGlobal = diffs.reduce((sum, diff) => sum + Math.abs(diff), 0) / diffs.length
 
         const activitiesByCP = {}
-        activitiesData.forEach((activity) => {
+        filteredActivities.forEach((activity) => {
           const cpCode = activity.apsa?.cp?.code
-          if (cpCode) {
+          if (cpCode && cpCode !== "CP5") { // Exclure CP5
             if (!activitiesByCP[cpCode]) {
               activitiesByCP[cpCode] = []
             }
@@ -105,11 +110,35 @@ export default function StatsPersoPage() {
           }
         })
 
-        const totalCPs = 5
+        const totalCPs = 4 // Collège = 4 CP (CP5 exclue)
         const cpCoverage = {
           covered: Object.keys(activitiesByCP).length,
           total: totalCPs,
           percentage: (Object.keys(activitiesByCP).length / totalCPs) * 100,
+        }
+
+        // Calculer le label égalité personnel
+        let personalLabel = "Non calculé"
+        let personalLabelColor = "text-gray-600"
+        let personalLabelBg = "bg-gray-100"
+
+        if (filteredActivities.length > 0) {
+          const allCPsCoveredPersonal = Object.keys(activitiesByCP).length === 4
+          const lowDiffPersonal = avgDiffGlobal < 0.5
+
+          if (allCPsCoveredPersonal && lowDiffPersonal) {
+            personalLabel = "Équilibré"
+            personalLabelColor = "text-green-700"
+            personalLabelBg = "bg-green-100"
+          } else if (Object.keys(activitiesByCP).length >= 3 || avgDiffGlobal < 1) {
+            personalLabel = "En progrès"
+            personalLabelColor = "text-yellow-700"
+            personalLabelBg = "bg-yellow-100"
+          } else {
+            personalLabel = "À renforcer"
+            personalLabelColor = "text-orange-700"
+            personalLabelBg = "bg-orange-100"
+          }
         }
 
         setStats({
@@ -117,10 +146,13 @@ export default function StatsPersoPage() {
           avgDiffGlobal,
           cpCoverage,
           activitiesByCP,
+          personalLabel,
+          personalLabelColor,
+          personalLabelBg,
         })
 
         // Prepare bar chart data (by APSA)
-        const chartDataArray = activitiesData.map((activity) => ({
+        const chartDataArray = filteredActivities.map((activity) => ({
           name: activity.apsa?.name || "N/A",
           "Moy. Filles": parseFloat((activity.avg_score_girls || 0).toFixed(2)),
           "Moy. Garçons": parseFloat((activity.avg_score_boys || 0).toFixed(2)),
@@ -130,7 +162,7 @@ export default function StatsPersoPage() {
 
         // Prepare trend chart data (by period)
         const activitiesByPeriod = {}
-        activitiesData.forEach((activity) => {
+        filteredActivities.forEach((activity) => {
           const period = activity.period || "Non défini"
           if (!activitiesByPeriod[period]) {
             activitiesByPeriod[period] = []
@@ -163,8 +195,11 @@ export default function StatsPersoPage() {
         setStats({
           totalActivities: 0,
           avgDiffGlobal: 0,
-          cpCoverage: { covered: 0, total: 5, percentage: 0 },
+          cpCoverage: { covered: 0, total: 4, percentage: 0 },
           activitiesByCP: {},
+          personalLabel: "Non calculé",
+          personalLabelColor: "text-gray-600",
+          personalLabelBg: "bg-gray-100",
         })
         setChartData([])
         setTrendData([])
@@ -199,7 +234,7 @@ export default function StatsPersoPage() {
               Statistiques Personnelles
             </h1>
             <p className="text-gray-600">
-              Analyse de vos données d'égalité Filles/Garçons
+              Analyse de vos données d'égalité Filles/Garçons (Collège - CP1 à CP4)
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -226,7 +261,7 @@ export default function StatsPersoPage() {
                     {stats.totalActivities}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Activités avec moyennes F/G
+                    Activités avec moyennes F/G (CP5 exclue)
                   </p>
                 </CardContent>
               </Card>
@@ -258,11 +293,30 @@ export default function StatsPersoPage() {
                     {stats.cpCoverage.covered} / {stats.cpCoverage.total}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {stats.cpCoverage.percentage.toFixed(0)}% des CP travaillées
+                    {stats.cpCoverage.percentage.toFixed(0)}% des CP travaillées (Collège)
                   </p>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Label personnel */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="text-center text-xl">
+                  Mon Label Égalité Personnel
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`${stats.personalLabelBg} rounded-lg p-6 text-center border-2`}>
+                  <div className={`text-3xl font-bold ${stats.personalLabelColor}`}>
+                    {stats.personalLabel}
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Basé sur vos {stats.totalActivities} activité(s) pour l'année {schoolYear}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Graphiques */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -301,7 +355,7 @@ export default function StatsPersoPage() {
                 <CardHeader>
                   <CardTitle>Répartition des activités</CardTitle>
                   <CardDescription>
-                    Nombre d'activités par CP
+                    Nombre d'activités par CP (CP5 exclue)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -333,7 +387,7 @@ export default function StatsPersoPage() {
               <CardHeader>
                 <CardTitle>Comparaison Filles/Garçons par APSA</CardTitle>
                 <CardDescription>
-                  Moyennes détaillées pour chaque activité
+                  Moyennes détaillées pour chaque activité (CP5 exclue)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -360,10 +414,52 @@ export default function StatsPersoPage() {
               <TabsContent value="by-apsa">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Écarts Filles/Garçons par APSA</CardTitle>
-                    <CardDescription>
-                      Différence de moyennes pour chaque activité
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Écarts Filles/Garçons par APSA</CardTitle>
+                        <CardDescription>
+                          Différence de moyennes pour chaque activité
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const sorted = [...activities].sort((a, b) => 
+                              (a.period || "ZZZ").localeCompare(b.period || "ZZZ")
+                            )
+                            setActivities(sorted)
+                          }}
+                        >
+                          Trier par période
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const sorted = [...activities].sort((a, b) => 
+                              (a.apsa?.cp?.code || "").localeCompare(b.apsa?.cp?.code || "")
+                            )
+                            setActivities(sorted)
+                          }}
+                        >
+                          Trier par CP
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const sorted = [...activities].sort((a, b) => 
+                              (a.apsa?.name || "").localeCompare(b.apsa?.name || "")
+                            )
+                            setActivities(sorted)
+                          }}
+                        >
+                          Trier par activité
+                        </Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -427,7 +523,7 @@ export default function StatsPersoPage() {
                   <CardHeader>
                     <CardTitle>Écarts Filles/Garçons par CP</CardTitle>
                     <CardDescription>
-                      Analyse par compétence propre
+                      Analyse par compétence propre (Collège - CP1 à CP4)
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

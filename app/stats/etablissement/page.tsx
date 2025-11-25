@@ -10,6 +10,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { SchoolYearSelector } from "@/components/school-year-selector"
+import { LabelInfoModal } from "@/components/label-info-modal"
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
 
@@ -336,9 +337,12 @@ export default function StatsEtablissementPage() {
           <>
             <Card className="mb-8">
               <CardHeader>
-                <CardTitle className="text-center text-2xl">
-                  Label Égalité - Année {schoolYear}
-                </CardTitle>
+                <div className="flex items-center justify-center">
+                  <CardTitle className="text-center text-2xl">
+                    Label Égalité - Année {schoolYear}
+                  </CardTitle>
+                  <LabelInfoModal />
+                </div>
                 <CardDescription className="text-center">
                   Niveau Collège (CP1 à CP4 - CP5 exclue)
                 </CardDescription>

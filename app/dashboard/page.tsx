@@ -7,6 +7,7 @@ import { Building, Users, BarChart, BookOpen, TrendingUp, Award, Podcast } from 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { SourcesModal } from "@/components/sources-modal"
+import { VigilanceQuiz } from "@/components/vigilance-quiz"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -325,7 +326,7 @@ export default async function DashboardPage() {
         {/* Ressources Section */}
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Ressources pédagogiques</h3>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             <a 
               href="https://drive.google.com/file/d/1pEMfIaLvKr-ilwzHiJqxjGw4F4w6rPJY/view?usp=sharing"
               target="_blank"
@@ -356,6 +357,14 @@ export default async function DashboardPage() {
                 <SourcesModal />
               </CardContent>
             </Card>
+
+            {/* Quiz de vigilance */}
+            {profile?.establishment_id && (
+              <VigilanceQuiz 
+                userId={user.id} 
+                schoolId={profile.establishment_id} 
+              />
+            )}
           </div>
         </div>
 

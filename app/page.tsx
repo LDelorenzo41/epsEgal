@@ -1,13 +1,17 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { EpsInfoModal } from "@/components/eps-info-modal"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-blue-600">EPS Égalité</h1>
+          <div className="flex items-center">
+            <h1 className="text-2xl font-bold text-blue-600">EPS Égalité</h1>
+            <EpsInfoModal />
+          </div>
           <div className="flex gap-4">
             <Link href="/auth/login">
               <Button variant="outline">Connexion</Button>
@@ -21,10 +25,13 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            EPS Égalité
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <div className="flex items-center justify-center">
+            <h2 className="text-4xl font-bold text-gray-900">
+              EPS Égalité
+            </h2>
+            <EpsInfoModal />
+          </div>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mt-4">
             Faites un état des lieux de l'égalité Filles/Garçons en EPS et de la répartition des compétences propres travaillées dans votre établissement
           </p>
         </div>

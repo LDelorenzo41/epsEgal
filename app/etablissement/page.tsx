@@ -1,7 +1,6 @@
 // @ts-nocheck
 "use client"
 
-
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -14,72 +13,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/components/ui/use-toast"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Users, Info } from "lucide-react"
+import { SchoolYearSelector } from "@/components/school-year-selector"
 
-interface Profile {
-  id: string
-  establishment_id: string | null
-  establishments?: {
-    id: string
-    name: string
-    identification_code: string
-    max_teachers: number
-    nb_students_total: number | null
-    nb_students_girls: number | null
-    nb_students_boys: number | null
-  }
-}
-
-interface Level {
-  id: string
-  establishment_id: string
-  name: string
-  nb_classes: number | null
-}
-
-interface Class {
-  id: string
-  establishment_id: string
-  level_id: string
-  name: string
-  nb_students_total: number | null
-  nb_students_girls: number | null
-  nb_students_boys: number | null
-  levels?: {
-    name: string
-  }
-}
-
-interface CP {
-  id: string
-  code: string
-  label: string
-}
-
-interface APSA {
-  id: string
-  establishment_id: string
-  cp_id: string
-  name: string
-  description: string | null
-  cp?: {
-    code: string
-    label: string
-  }
+const ESTABLISHMENT_TYPES = {
+  college: "Collège",
+  lycee_gt: "Lycée Général et Technologique",
+  lycee_pro: "Lycée Professionnel"
 }
 
 export default function EtablissementPage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [levels, setLevels] = useState<Level[]>([])
-  const [classes, setClasses] = useState<Class[]>([])
-  const [cps, setCps] = useState<CP[]>([])
-  const [apsas, setApsas] = useState<APSA[]>([])
+  const [profile, setProfile] = useState(null)
+  const [levels, setLevels] = useState([])
+  const [classes, setClasses] = useState([])
+  const [cps, setCps] = useState([])
+  const [apsas, setApsas] = useState([])
+  const [apsaClasses, setApsaClasses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [schoolYear, setSchoolYear] = useState("2025-26")
 
   // Forms state
   const [showLevelForm, setShowLevelForm] = useState(false)
   const [showClassForm, setShowClassForm] = useState(false)
   const [showApsaForm, setShowApsaForm] = useState(false)
+  const [showApsaClassesForm, setShowApsaClassesForm] = useState(false)
+  const [selectedApsaForClasses, setSelectedApsaForClasses] = useState(null)
 
   const [levelForm, setLevelForm] = useState({ id: "", name: "", nb_classes: "" })
   const [classForm, setClassForm] = useState({
@@ -96,6 +54,7 @@ export default function EtablissementPage() {
     name: "",
     description: "",
   })
+  const [selectedClassIds, setSelectedClassIds] = useState([])
 
   const supabase = createClient()
   const router = useRouter()
@@ -103,7 +62,7 @@ export default function EtablissementPage() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [schoolYear])
 
   const loadData = async () => {
     try {
@@ -123,53 +82,63 @@ export default function EtablissementPage() {
         .eq("id", user.id)
         .single()
 
-      // @ts-ignore
       if (!profileData?.establishment_id) {
         router.push("/dashboard")
         return
       }
 
-      // @ts-ignore
       setProfile(profileData)
 
       // Get levels
       const { data: levelsData } = await supabase
         .from("levels")
         .select("*")
-        // @ts-ignore
         .eq("establishment_id", profileData.establishment_id)
         .order("name")
 
-      // @ts-ignore
       setLevels(levelsData || [])
 
       // Get classes
       const { data: classesData } = await supabase
         .from("classes")
         .select("*, levels(*)")
-        // @ts-ignore
         .eq("establishment_id", profileData.establishment_id)
         .order("name")
 
-      // @ts-ignore
       setClasses(classesData || [])
 
-      // Get CP
+      // Get CP - filtrer selon le type d'établissement
       const { data: cpsData } = await supabase.from("cp").select("*").order("code")
-      // @ts-ignore
-      setCps(cpsData || [])
+      
+      // Si c'est un collège, exclure CP5
+      let filteredCps = cpsData || []
+      if (profileData.establishments?.type === "college") {
+        filteredCps = filteredCps.filter(cp => cp.code !== "CP5")
+      }
+      setCps(filteredCps)
 
       // Get APSA
       const { data: apsasData } = await supabase
         .from("apsa")
         .select("*, cp(*)")
-        // @ts-ignore
         .eq("establishment_id", profileData.establishment_id)
         .order("name")
 
-      // @ts-ignore
       setApsas(apsasData || [])
-    } catch (error: any) {
+
+      // Get APSA Classes liaisons
+      const { data: apsaClassesData } = await supabase
+        .from("apsa_classes")
+        .select("*, apsa(*), classes(*)")
+        .eq("school_year", schoolYear)
+
+      // Filtrer pour ne garder que celles de l'établissement
+      const filteredApsaClasses = (apsaClassesData || []).filter(ac => 
+        apsasData?.some(a => a.id === ac.apsa_id)
+      )
+      setApsaClasses(filteredApsaClasses)
+
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -185,7 +154,6 @@ export default function EtablissementPage() {
     if (!levelForm.name || !profile?.establishment_id) return
 
     try {
-      // @ts-ignore
       const data = {
         establishment_id: profile.establishment_id,
         name: levelForm.name,
@@ -193,8 +161,6 @@ export default function EtablissementPage() {
       }
 
       if (levelForm.id) {
-        // Update
-        // @ts-ignore
         const { error } = await supabase
           .from("levels")
           .update(data)
@@ -203,8 +169,6 @@ export default function EtablissementPage() {
         if (error) throw error
         toast({ title: "Niveau modifié avec succès" })
       } else {
-        // Insert
-        // @ts-ignore
         const { error } = await supabase.from("levels").insert(data)
 
         if (error) throw error
@@ -214,7 +178,7 @@ export default function EtablissementPage() {
       setShowLevelForm(false)
       setLevelForm({ id: "", name: "", nb_classes: "" })
       loadData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -223,7 +187,7 @@ export default function EtablissementPage() {
     }
   }
 
-  const handleDeleteLevel = async (id: string) => {
+  const handleDeleteLevel = async (id) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer ce niveau ?")) return
 
     try {
@@ -233,7 +197,7 @@ export default function EtablissementPage() {
 
       toast({ title: "Niveau supprimé avec succès" })
       loadData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -247,7 +211,6 @@ export default function EtablissementPage() {
     if (!classForm.level_id || !classForm.name || !profile?.establishment_id) return
 
     try {
-      // @ts-ignore
       const data = {
         establishment_id: profile.establishment_id,
         level_id: classForm.level_id,
@@ -264,8 +227,6 @@ export default function EtablissementPage() {
       }
 
       if (classForm.id) {
-        // Update
-        // @ts-ignore
         const { error } = await supabase
           .from("classes")
           .update(data)
@@ -274,8 +235,6 @@ export default function EtablissementPage() {
         if (error) throw error
         toast({ title: "Classe modifiée avec succès" })
       } else {
-        // Insert
-        // @ts-ignore
         const { error } = await supabase.from("classes").insert(data)
 
         if (error) throw error
@@ -292,7 +251,7 @@ export default function EtablissementPage() {
         nb_students_boys: "",
       })
       loadData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -301,7 +260,7 @@ export default function EtablissementPage() {
     }
   }
 
-  const handleDeleteClass = async (id: string) => {
+  const handleDeleteClass = async (id) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette classe ?")) return
 
     try {
@@ -311,7 +270,7 @@ export default function EtablissementPage() {
 
       toast({ title: "Classe supprimée avec succès" })
       loadData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -325,7 +284,6 @@ export default function EtablissementPage() {
     if (!apsaForm.cp_id || !apsaForm.name || !profile?.establishment_id) return
 
     try {
-      // @ts-ignore
       const data = {
         establishment_id: profile.establishment_id,
         cp_id: apsaForm.cp_id,
@@ -334,15 +292,11 @@ export default function EtablissementPage() {
       }
 
       if (apsaForm.id) {
-        // Update
-        // @ts-ignore
         const { error } = await supabase.from("apsa").update(data).eq("id", apsaForm.id)
 
         if (error) throw error
         toast({ title: "APSA modifiée avec succès" })
       } else {
-        // Insert
-        // @ts-ignore
         const { error } = await supabase.from("apsa").insert(data)
 
         if (error) throw error
@@ -352,7 +306,7 @@ export default function EtablissementPage() {
       setShowApsaForm(false)
       setApsaForm({ id: "", cp_id: "", name: "", description: "" })
       loadData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -361,7 +315,7 @@ export default function EtablissementPage() {
     }
   }
 
-  const handleDeleteApsa = async (id: string) => {
+  const handleDeleteApsa = async (id) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette APSA ?")) return
 
     try {
@@ -371,13 +325,74 @@ export default function EtablissementPage() {
 
       toast({ title: "APSA supprimée avec succès" })
       loadData()
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erreur",
         description: error.message,
       })
     }
+  }
+
+  // APSA CLASSES - Gestion des classes associées à une APSA
+  const openApsaClassesForm = (apsa) => {
+    setSelectedApsaForClasses(apsa)
+    // Récupérer les classes déjà associées
+    const existingClassIds = apsaClasses
+      .filter(ac => ac.apsa_id === apsa.id)
+      .map(ac => ac.class_id)
+    setSelectedClassIds(existingClassIds)
+    setShowApsaClassesForm(true)
+  }
+
+  const handleSaveApsaClasses = async () => {
+    if (!selectedApsaForClasses) return
+
+    try {
+      // Supprimer les anciennes liaisons pour cette APSA et cette année
+      await supabase
+        .from("apsa_classes")
+        .delete()
+        .eq("apsa_id", selectedApsaForClasses.id)
+        .eq("school_year", schoolYear)
+
+      // Insérer les nouvelles liaisons
+      if (selectedClassIds.length > 0) {
+        const newLinks = selectedClassIds.map(classId => ({
+          apsa_id: selectedApsaForClasses.id,
+          class_id: classId,
+          school_year: schoolYear
+        }))
+
+        const { error } = await supabase.from("apsa_classes").insert(newLinks)
+        if (error) throw error
+      }
+
+      toast({ title: "Classes associées avec succès" })
+      setShowApsaClassesForm(false)
+      setSelectedApsaForClasses(null)
+      setSelectedClassIds([])
+      loadData()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message,
+      })
+    }
+  }
+
+  const toggleClassSelection = (classId) => {
+    if (selectedClassIds.includes(classId)) {
+      setSelectedClassIds(selectedClassIds.filter(id => id !== classId))
+    } else {
+      setSelectedClassIds([...selectedClassIds, classId])
+    }
+  }
+
+  // Compter les classes par APSA
+  const getClassCountForApsa = (apsaId) => {
+    return apsaClasses.filter(ac => ac.apsa_id === apsaId).length
   }
 
   if (loading) {
@@ -424,6 +439,21 @@ export default function EtablissementPage() {
                   <div className="text-lg font-semibold">
                     {profile?.establishments?.name}
                   </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium text-gray-500 mb-1">
+                    Type d'établissement
+                  </div>
+                  <div className="text-lg font-semibold text-blue-600">
+                    {ESTABLISHMENT_TYPES[profile?.establishments?.type] || "Non défini"}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {profile?.establishments?.type === "college" 
+                      ? "CP1 à CP4 prises en compte pour le Label (CP5 exclue)"
+                      : "CP1 à CP5 prises en compte pour le Label"
+                    }
+                  </p>
                 </div>
 
                 <div>
@@ -783,21 +813,33 @@ export default function EtablissementPage() {
                   <div>
                     <CardTitle>APSA</CardTitle>
                     <CardDescription>
-                      Activités Physiques Sportives et Artistiques
+                      Activités Physiques Sportives et Artistiques - Année {schoolYear}
                     </CardDescription>
                   </div>
-                  <Button
-                    onClick={() => {
-                      setApsaForm({ id: "", cp_id: "", name: "", description: "" })
-                      setShowApsaForm(true)
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ajouter une APSA
-                  </Button>
+                  <div className="flex items-center gap-4">
+                    <SchoolYearSelector value={schoolYear} onChange={setSchoolYear} />
+                    <Button
+                      onClick={() => {
+                        setApsaForm({ id: "", cp_id: "", name: "", description: "" })
+                        setShowApsaForm(true)
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ajouter une APSA
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Info sur les classes */}
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex items-start gap-2">
+                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Pour chaque APSA, vous pouvez définir quelles classes la pratiquent cette année. 
+                    Cliquez sur l'icône <Users className="h-4 w-4 inline" /> pour associer des classes.
+                  </span>
+                </div>
+
                 {showApsaForm && (
                   <div className="mb-6 p-4 border rounded-lg bg-blue-50">
                     <h3 className="font-semibold mb-4">
@@ -864,6 +906,56 @@ export default function EtablissementPage() {
                   </div>
                 )}
 
+                {/* Formulaire d'association APSA-Classes */}
+                {showApsaClassesForm && selectedApsaForClasses && (
+                  <div className="mb-6 p-4 border rounded-lg bg-green-50">
+                    <h3 className="font-semibold mb-2">
+                      Associer des classes à : {selectedApsaForClasses.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Sélectionnez les classes qui pratiqueront cette APSA en {schoolYear}
+                    </p>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 max-h-60 overflow-y-auto">
+                      {classes.map((classe) => (
+                        <button
+                          key={classe.id}
+                          onClick={() => toggleClassSelection(classe.id)}
+                          className={`p-2 rounded border text-sm text-left transition-colors ${
+                            selectedClassIds.includes(classe.id)
+                              ? "bg-green-200 border-green-500 text-green-800"
+                              : "bg-white border-gray-200 hover:border-green-300"
+                          }`}
+                        >
+                          <div className="font-medium">{classe.name}</div>
+                          <div className="text-xs text-gray-500">{classe.levels?.name}</div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        {selectedClassIds.length} classe(s) sélectionnée(s)
+                      </span>
+                      <div className="flex gap-2">
+                        <Button onClick={handleSaveApsaClasses}>
+                          Enregistrer
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowApsaClassesForm(false)
+                            setSelectedApsaForClasses(null)
+                            setSelectedClassIds([])
+                          }}
+                        >
+                          Annuler
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {apsas.length > 0 ? (
                   <div className="space-y-3">
                     {cps.map((cp) => {
@@ -876,45 +968,66 @@ export default function EtablissementPage() {
                             {cp.code} - {cp.label}
                           </div>
                           <div className="grid gap-2">
-                            {cpApsas.map((apsa) => (
-                              <div
-                                key={apsa.id}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded border"
-                              >
-                                <div>
-                                  <div className="font-medium">{apsa.name}</div>
-                                  {apsa.description && (
-                                    <div className="text-sm text-gray-500">
-                                      {apsa.description}
+                            {cpApsas.map((apsa) => {
+                              const classCount = getClassCountForApsa(apsa.id)
+                              return (
+                                <div
+                                  key={apsa.id}
+                                  className="flex items-center justify-between p-3 bg-gray-50 rounded border"
+                                >
+                                  <div className="flex-1">
+                                    <div className="font-medium">{apsa.name}</div>
+                                    {apsa.description && (
+                                      <div className="text-sm text-gray-500">
+                                        {apsa.description}
+                                      </div>
+                                    )}
+                                    <div className="text-xs text-gray-400 mt-1">
+                                      {classCount > 0 
+                                        ? `${classCount} classe(s) associée(s)`
+                                        : "Aucune classe associée"
+                                      }
                                     </div>
-                                  )}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openApsaClassesForm(apsa)}
+                                      title="Associer des classes"
+                                      className={classCount > 0 ? "border-green-300 text-green-600" : ""}
+                                    >
+                                      <Users className="h-4 w-4" />
+                                      {classCount > 0 && (
+                                        <span className="ml-1 text-xs">{classCount}</span>
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setApsaForm({
+                                          id: apsa.id,
+                                          cp_id: apsa.cp_id,
+                                          name: apsa.name,
+                                          description: apsa.description || "",
+                                        })
+                                        setShowApsaForm(true)
+                                      }}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDeleteApsa(apsa.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setApsaForm({
-                                        id: apsa.id,
-                                        cp_id: apsa.cp_id,
-                                        name: apsa.name,
-                                        description: apsa.description || "",
-                                      })
-                                      setShowApsaForm(true)
-                                    }}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleDeleteApsa(apsa.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         </div>
                       )

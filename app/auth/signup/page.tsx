@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Info } from "lucide-react"
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false)
@@ -22,6 +23,7 @@ export default function SignupPage() {
     password: "",
     fullName: "",
     establishmentName: "",
+    establishmentType: "",
     maxTeachers: "10",
     gender: "",
   })
@@ -43,6 +45,10 @@ export default function SignupPage() {
         throw new Error("Veuillez sélectionner votre sexe")
       }
 
+      if (!createForm.establishmentType) {
+        throw new Error("Veuillez sélectionner le type d'établissement")
+      }
+
       // 1. Create user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: createForm.email,
@@ -62,6 +68,7 @@ export default function SignupPage() {
           name: createForm.establishmentName,
           identification_code: identificationCode,
           max_teachers: parseInt(createForm.maxTeachers),
+          type: createForm.establishmentType,
         })
         .select()
         .single()
@@ -240,6 +247,32 @@ export default function SignupPage() {
                 </div>
 
                 <div>
+                  <Label htmlFor="create-type">Type d'établissement *</Label>
+                  <Select
+                    value={createForm.establishmentType}
+                    onValueChange={(value) =>
+                      setCreateForm({ ...createForm, establishmentType: value })
+                    }
+                  >
+                    <SelectTrigger id="create-type">
+                      <SelectValue placeholder="Sélectionner le type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="college">Collège</SelectItem>
+                      <SelectItem value="lycee_gt">Lycée Général et Technologique</SelectItem>
+                      <SelectItem value="lycee_pro">Lycée Professionnel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-start gap-2 mt-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                    <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Collège :</strong> CP1 à CP4 (CP5 exclue du Label)<br />
+                      <strong>Lycée :</strong> CP1 à CP5 (toutes les CP incluses)
+                    </span>
+                  </div>
+                </div>
+
+                <div>
                   <Label htmlFor="create-max">Nombre maximum de professeurs *</Label>
                   <Input
                     id="create-max"
@@ -355,3 +388,5 @@ export default function SignupPage() {
     </div>
   )
 }
+
+

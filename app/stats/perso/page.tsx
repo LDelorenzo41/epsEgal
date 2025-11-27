@@ -30,7 +30,8 @@ export default function StatsPersoPage() {
   const [chartData, setChartData] = useState([])
   const [trendData, setTrendData] = useState([])
   const [pieData, setPieData] = useState([])
-  const [schoolYear, setSchoolYear] = useState("2025-2026")
+  const [schoolYear, setSchoolYear] = useState("2025-26")
+
 
 
   const supabase = createClient()

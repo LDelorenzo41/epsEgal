@@ -37,7 +37,8 @@ export default function StatsEtablissementPage() {
   })
   const [chartData, setChartData] = useState([])
   const [pieChartData, setPieChartData] = useState([])
-  const [schoolYear, setSchoolYear] = useState("2025-2026")
+  const [schoolYear, setSchoolYear] = useState("2025-26")
+
   const [establishmentType, setEstablishmentType] = useState(null)
   const [quizStats, setQuizStats] = useState(null)
 

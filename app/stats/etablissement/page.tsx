@@ -11,8 +11,15 @@ import { Button } from "@/components/ui/button"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { SchoolYearSelector } from "@/components/school-year-selector"
 import { LabelInfoModal } from "@/components/label-info-modal"
+import { AlertTriangle } from "lucide-react"
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
+
+const ESTABLISHMENT_TYPES = {
+  college: { name: "Collège", cpCount: 4, excludeCP5: true },
+  lycee_gt: { name: "Lycée Général et Technologique", cpCount: 5, excludeCP5: false },
+  lycee_pro: { name: "Lycée Professionnel", cpCount: 5, excludeCP5: false }
+}
 
 export default function StatsEtablissementPage() {
   const [loading, setLoading] = useState(true)
@@ -22,13 +29,17 @@ export default function StatsEtablissementPage() {
     avgDiffGlobal: 0,
     cpCoverage: {},
     activitiesByCP: {},
+    cpBalance: {},
     label: "Non calculé",
     labelColor: "text-gray-600",
     labelBg: "bg-gray-100",
+    labelScore: 0,
   })
   const [chartData, setChartData] = useState([])
   const [pieChartData, setPieChartData] = useState([])
   const [schoolYear, setSchoolYear] = useState("2025-26")
+  const [establishmentType, setEstablishmentType] = useState(null)
+  const [quizStats, setQuizStats] = useState(null)
 
   // Nouveaux états pour les analyses supplémentaires
   const [genderAnalysis, setGenderAnalysis] = useState({
@@ -69,6 +80,39 @@ export default function StatsEtablissementPage() {
       }
 
       setProfile(profileData)
+      const estType = profileData.establishments?.type || "college"
+      setEstablishmentType(estType)
+      const typeConfig = ESTABLISHMENT_TYPES[estType] || ESTABLISHMENT_TYPES.college
+
+      // Charger les stats du quiz
+      const { data: quizStatsData } = await supabase
+        .from("school_quiz_stats")
+        .select("average_score, total_respondents")
+        .eq("school_id", profileData.establishment_id)
+        .eq("school_year", schoolYear)
+        .maybeSingle()
+
+      setQuizStats(quizStatsData)
+
+      // Charger les APSA avec leurs classes associées
+      const { data: apsaClassesData } = await supabase
+        .from("apsa_classes")
+        .select(`
+          *,
+          apsa!inner (
+            id,
+            name,
+            establishment_id,
+            cp (code, label)
+          ),
+          classes (id, name)
+        `)
+        .eq("school_year", schoolYear)
+
+      // Filtrer pour l'établissement
+      const establishmentApsaClasses = (apsaClassesData || []).filter(
+        ac => ac.apsa?.establishment_id === profileData.establishment_id
+      )
 
       const { data: allActivities } = await supabase
         .from("class_activities")
@@ -97,8 +141,11 @@ export default function StatsEtablissementPage() {
         .not("avg_score_boys", "is", null)
 
       if (allActivities && allActivities.length > 0) {
-        // Exclure CP5 des activités
-        const filteredActivities = allActivities.filter((a) => a.apsa?.cp?.code !== "CP5")
+        // Filtrer selon le type d'établissement
+        const filteredActivities = typeConfig.excludeCP5
+          ? allActivities.filter((a) => a.apsa?.cp?.code !== "CP5")
+          : allActivities
+
         const totalActivities = filteredActivities.length
 
         const diffs = filteredActivities.map((a) => {
@@ -108,10 +155,11 @@ export default function StatsEtablissementPage() {
 
         const avgDiffGlobal = diffs.reduce((sum, diff) => sum + Math.abs(diff), 0) / diffs.length
 
+        // Grouper par CP
         const activitiesByCP = {}
         filteredActivities.forEach((activity) => {
           const cpCode = activity.apsa?.cp?.code
-          if (cpCode && cpCode !== "CP5") {
+          if (cpCode) {
             if (!activitiesByCP[cpCode]) {
               activitiesByCP[cpCode] = []
             }
@@ -119,26 +167,87 @@ export default function StatsEtablissementPage() {
           }
         })
 
-        const totalCPs = 4 // Collège = CP1 à CP4 (CP5 exclue)
+        // Calculer le poids de chaque CP (nombre de classes pratiquant)
+        const cpWeight = {}
+        const cpClassCount = {}
+        establishmentApsaClasses.forEach(ac => {
+          const cpCode = ac.apsa?.cp?.code
+          if (cpCode && (!typeConfig.excludeCP5 || cpCode !== "CP5")) {
+            if (!cpClassCount[cpCode]) {
+              cpClassCount[cpCode] = new Set()
+            }
+            cpClassCount[cpCode].add(ac.class_id)
+          }
+        })
+
+        // Convertir en nombre
+        Object.keys(cpClassCount).forEach(cp => {
+          cpWeight[cp] = cpClassCount[cp].size
+        })
+
+        const totalWeight = Object.values(cpWeight).reduce((sum, w) => sum + w, 0)
+
+        // Calculer l'équilibre des CP
+        const expectedWeight = totalWeight / typeConfig.cpCount // Poids idéal par CP
+        let balanceScore = 0
+        const cpBalanceDetails = {}
+
+        Object.keys(cpWeight).forEach(cp => {
+          const deviation = Math.abs(cpWeight[cp] - expectedWeight) / (expectedWeight || 1)
+          cpBalanceDetails[cp] = {
+            weight: cpWeight[cp],
+            percentage: totalWeight > 0 ? (cpWeight[cp] / totalWeight * 100).toFixed(1) : 0,
+            deviation: deviation
+          }
+          balanceScore += deviation
+        })
+
+        // Normaliser le score d'équilibre (0 = parfait, 1+ = déséquilibré)
+        const avgBalanceDeviation = Object.keys(cpWeight).length > 0
+          ? balanceScore / Object.keys(cpWeight).length
+          : 1
+
         const coveredCPs = Object.keys(activitiesByCP).length
         const cpCoverage = {
           covered: coveredCPs,
-          total: totalCPs,
-          percentage: (coveredCPs / totalCPs) * 100,
+          total: typeConfig.cpCount,
+          percentage: (coveredCPs / typeConfig.cpCount) * 100,
         }
 
-        const allCPsCovered = coveredCPs === 4
-        const lowDiff = avgDiffGlobal < 0.5
+        // NOUVEAU CALCUL DU LABEL
+        // Facteurs :
+        // 1. Écart moyen F/G (40%)
+        // 2. Couverture des CP (30%)
+        // 3. Équilibre des CP (20%)
+        // 4. Quiz vigilance (10%)
 
+        // Score écart (0-100) : 0 = écart de 2+, 100 = écart de 0
+        const gapScore = Math.max(0, 100 - (avgDiffGlobal * 50))
+
+        // Score couverture (0-100)
+        const coverageScore = (coveredCPs / typeConfig.cpCount) * 100
+
+        // Score équilibre (0-100) : 0 = très déséquilibré, 100 = parfait
+        const balanceScoreNormalized = Math.max(0, 100 - (avgBalanceDeviation * 100))
+
+        // Score quiz (0-100)
+        const quizScore = quizStatsData
+          ? (quizStatsData.average_score / 15) * 100
+          : 50 // Valeur neutre si pas de données
+
+        // Score total pondéré
+        const totalScore = (gapScore * 0.4) + (coverageScore * 0.3) + (balanceScoreNormalized * 0.2) + (quizScore * 0.1)
+
+        // Déterminer le label
         let label = "À renforcer"
         let labelColor = "text-orange-700"
         let labelBg = "bg-orange-100"
 
-        if (allCPsCovered && lowDiff) {
+        if (totalScore >= 75) {
           label = "Équilibré"
           labelColor = "text-green-700"
           labelBg = "bg-green-100"
-        } else if (coveredCPs >= 3 || avgDiffGlobal < 1) {
+        } else if (totalScore >= 50) {
           label = "En progrès"
           labelColor = "text-yellow-700"
           labelBg = "bg-yellow-100"
@@ -149,9 +258,16 @@ export default function StatsEtablissementPage() {
           avgDiffGlobal,
           cpCoverage,
           activitiesByCP,
+          cpBalance: cpBalanceDetails,
+          cpWeight,
           label,
           labelColor,
           labelBg,
+          labelScore: totalScore,
+          gapScore,
+          coverageScore,
+          balanceScore: balanceScoreNormalized,
+          quizScore,
         })
 
         // Prepare chart data
@@ -169,10 +285,10 @@ export default function StatsEtablissementPage() {
         })
         setChartData(chartDataArray)
 
-        // Prepare pie chart data
-        const pieData = Object.entries(activitiesByCP).map(([cpCode, cpActivities]) => ({
+        // Prepare pie chart data avec le poids réel (nombre de classes)
+        const pieData = Object.entries(cpWeight).map(([cpCode, weight]) => ({
           name: cpCode,
-          value: cpActivities.length,
+          value: weight,
         }))
         setPieChartData(pieData)
 
@@ -275,11 +391,14 @@ export default function StatsEtablissementPage() {
         setStats({
           totalActivities: 0,
           avgDiffGlobal: 0,
-          cpCoverage: { covered: 0, total: 4, percentage: 0 },
+          cpCoverage: { covered: 0, total: typeConfig.cpCount, percentage: 0 },
           activitiesByCP: {},
+          cpBalance: {},
+          cpWeight: {},
           label: "Non calculé",
           labelColor: "text-gray-600",
           labelBg: "bg-gray-100",
+          labelScore: 0,
         })
         setChartData([])
         setPieChartData([])
@@ -299,6 +418,8 @@ export default function StatsEtablissementPage() {
       setLoading(false)
     }
   }
+
+  const typeConfig = ESTABLISHMENT_TYPES[establishmentType] || ESTABLISHMENT_TYPES.college
 
   if (loading) {
     return (
@@ -322,7 +443,7 @@ export default function StatsEtablissementPage() {
               Statistiques Établissement
             </h1>
             <p className="text-gray-600">
-              {profile?.establishments?.name} - Niveau Collège (CP1 à CP4)
+              {profile?.establishments?.name} - {typeConfig.name} (CP1 à CP{typeConfig.cpCount})
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -344,34 +465,57 @@ export default function StatsEtablissementPage() {
                   <LabelInfoModal />
                 </div>
                 <CardDescription className="text-center">
-                  Niveau Collège (CP1 à CP4 - CP5 exclue)
+                  {typeConfig.name} (CP1 à CP{typeConfig.cpCount}{typeConfig.excludeCP5 ? " - CP5 exclue" : ""})
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className={`${stats.labelBg} rounded-lg p-8 text-center border-2`}>
-                  <div className={`text-4xl font-bold mb-4 ${stats.labelColor}`}>
+                  <div className={`text-4xl font-bold mb-2 ${stats.labelColor}`}>
                     {stats.label}
                   </div>
-                  <div className="text-sm text-gray-600 max-w-2xl mx-auto">
+                  <div className="text-2xl font-semibold text-gray-600 mb-4">
+                    Score : {stats.labelScore?.toFixed(0)}/100
+                  </div>
+                  
+                  {/* Détail du score */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 max-w-3xl mx-auto">
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="text-xs text-gray-500 mb-1">Écart F/G (40%)</div>
+                      <div className="text-lg font-bold text-blue-600">{stats.gapScore?.toFixed(0)}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="text-xs text-gray-500 mb-1">Couverture CP (30%)</div>
+                      <div className="text-lg font-bold text-purple-600">{stats.coverageScore?.toFixed(0)}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="text-xs text-gray-500 mb-1">Équilibre CP (20%)</div>
+                      <div className="text-lg font-bold text-green-600">{stats.balanceScore?.toFixed(0)}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                      <div className="text-xs text-gray-500 mb-1">Quiz vigilance (10%)</div>
+                      <div className="text-lg font-bold text-violet-600">
+                        {quizStats ? stats.quizScore?.toFixed(0) : "-"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-600 max-w-2xl mx-auto mt-6">
                     {stats.label === "Équilibré" && (
                       <p>
                         Félicitations ! Votre établissement présente un bon équilibre
-                        entre les moyennes Filles/Garçons et couvre l'ensemble des
-                        compétences propres du collège (CP1 à CP4).
+                        entre les moyennes Filles/Garçons et une répartition harmonieuse des CP.
                       </p>
                     )}
                     {stats.label === "En progrès" && (
                       <p>
                         Votre établissement progresse dans l'égalité Filles/Garçons.
-                        Continuez vos efforts pour couvrir toutes les CP et réduire
-                        les écarts de moyennes.
+                        Continuez vos efforts pour équilibrer les CP et réduire les écarts.
                       </p>
                     )}
                     {stats.label === "À renforcer" && (
                       <p>
-                        Des efforts sont nécessaires pour améliorer l'égalité
-                        Filles/Garçons. Travaillez sur la diversification des CP et
-                        la réduction des écarts de moyennes.
+                        Des efforts sont nécessaires pour améliorer l'égalité.
+                        Travaillez sur l'équilibre des CP et la réduction des écarts.
                       </p>
                     )}
                   </div>
@@ -379,7 +523,39 @@ export default function StatsEtablissementPage() {
               </CardContent>
             </Card>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
+            {/* Alerte si déséquilibre CP */}
+            {stats.cpWeight && Object.keys(stats.cpWeight).length > 0 && (
+              <div className="mb-8">
+                {Object.entries(stats.cpBalance || {}).some(([_, data]) => data.deviation > 0.5) && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-amber-800">Déséquilibre détecté dans la répartition des CP</h4>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Certaines CP sont sur ou sous-représentées par rapport à une répartition équilibrée.
+                        Pour améliorer votre Label, essayez d'équilibrer le nombre de classes pratiquant chaque CP.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {Object.entries(stats.cpBalance || {}).map(([cp, data]) => (
+                          <span
+                            key={cp}
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              data.deviation > 0.5
+                                ? "bg-amber-200 text-amber-800"
+                                : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {cp}: {data.weight} classe(s) ({data.percentage}%)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-4 gap-6 mb-8">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-gray-600">
@@ -391,7 +567,7 @@ export default function StatsEtablissementPage() {
                     {stats.totalActivities}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Total établissement (CP5 exclue)
+                    Total établissement
                   </p>
                 </CardContent>
               </Card>
@@ -423,7 +599,23 @@ export default function StatsEtablissementPage() {
                     {stats.cpCoverage.covered} / {stats.cpCoverage.total}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {stats.cpCoverage.percentage.toFixed(0)}% des CP travaillées (Collège)
+                    {stats.cpCoverage.percentage.toFixed(0)}% des CP travaillées
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">
+                    Quiz vigilance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-violet-600">
+                    {quizStats ? `${quizStats.average_score.toFixed(1)}/15` : "-"}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {quizStats ? `${quizStats.total_respondents} répondant(s)` : "Aucune donnée"}
                   </p>
                 </CardContent>
               </Card>
@@ -434,7 +626,7 @@ export default function StatsEtablissementPage() {
               <CardHeader>
                 <CardTitle>Comparaison Filles/Garçons par CP</CardTitle>
                 <CardDescription>
-                  Moyennes comparées pour chaque compétence propre (CP1 à CP4)
+                  Moyennes comparées pour chaque compétence propre
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -453,34 +645,40 @@ export default function StatsEtablissementPage() {
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
-              {/* Pie Chart - Répartition des activités par CP */}
+              {/* Pie Chart - Répartition des CP par nombre de classes */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Répartition des activités</CardTitle>
+                  <CardTitle>Poids des CP (nombre de classes)</CardTitle>
                   <CardDescription>
-                    Nombre d'activités par CP (CP5 exclue)
+                    Répartition des classes par compétence propre
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${value}`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {pieChartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={pieChartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value }) => `${name}: ${value} cl.`}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {pieChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-[300px] flex items-center justify-center text-gray-500">
+                      <p>Associez des classes aux APSA pour voir cette répartition</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -510,7 +708,7 @@ export default function StatsEtablissementPage() {
               <CardHeader>
                 <CardTitle>Analyse par Compétence Propre</CardTitle>
                 <CardDescription>
-                  Écarts moyens Filles/Garçons par CP (Collège - CP1 à CP4)
+                  Écarts moyens Filles/Garçons par CP
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -523,6 +721,7 @@ export default function StatsEtablissementPage() {
                     const avgGirls = cpActivities.reduce((sum, a) => sum + (a.avg_score_girls || 0), 0) / cpActivities.length
                     const avgBoys = cpActivities.reduce((sum, a) => sum + (a.avg_score_boys || 0), 0) / cpActivities.length
                     const cpLabel = cpActivities[0]?.apsa?.cp?.label
+                    const cpWeight = stats.cpWeight?.[cpCode] || 0
 
                     const diffColor = avgDiff < 0.5 ? "text-green-600" : avgDiff < 1 ? "text-yellow-600" : "text-red-600"
 
@@ -537,7 +736,7 @@ export default function StatsEtablissementPage() {
                               {cpLabel}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {cpActivities.length} activité(s) analysée(s)
+                              {cpActivities.length} activité(s) • {cpWeight} classe(s) associée(s)
                             </div>
                           </div>
                           <div className="flex items-center gap-6">
@@ -571,12 +770,12 @@ export default function StatsEtablissementPage() {
                     )
                   })}
 
-                  {stats.cpCoverage.covered < 4 && (
+                  {stats.cpCoverage.covered < stats.cpCoverage.total && (
                     <div className="border-2 border-dashed border-yellow-300 rounded-lg p-4 bg-yellow-50">
                       <div className="text-sm text-yellow-800">
                         <strong>CP non couvertes :</strong> Il manque{" "}
-                        {4 - stats.cpCoverage.covered} CP pour une couverture
-                        complète (Collège - CP1 à CP4).
+                        {stats.cpCoverage.total - stats.cpCoverage.covered} CP pour une couverture
+                        complète.
                       </div>
                     </div>
                   )}

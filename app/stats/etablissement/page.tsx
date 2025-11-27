@@ -37,7 +37,7 @@ export default function StatsEtablissementPage() {
   })
   const [chartData, setChartData] = useState([])
   const [pieChartData, setPieChartData] = useState([])
-  const [schoolYear, setSchoolYear] = useState("2025-26")
+  const [schoolYear, setSchoolYear] = useState("2025-2026")
   const [establishmentType, setEstablishmentType] = useState(null)
   const [quizStats, setQuizStats] = useState(null)
 
@@ -84,13 +84,16 @@ export default function StatsEtablissementPage() {
       setEstablishmentType(estType)
       const typeConfig = ESTABLISHMENT_TYPES[estType] || ESTABLISHMENT_TYPES.college
 
-      // Charger les stats du quiz
+      // Charger les stats du quiz - CORRECTION: utiliser establishment_id au lieu de school_id
       const { data: quizStatsData } = await supabase
-        .from("school_quiz_stats")
-        .select("average_score, total_respondents")
-        .eq("school_id", profileData.establishment_id)
-        .eq("school_year", schoolYear)
-        .maybeSingle()
+  .from("school_quiz_stats")
+  .select("average_score, total_respondents")
+  .eq("school_id", profileData.establishment_id)
+  .eq("school_year", schoolYear)
+  .maybeSingle()
+
+  console.log("Quiz stats:", quizStatsData, "Establishment ID:", profileData.establishment_id)
+
 
       setQuizStats(quizStatsData)
 
@@ -230,10 +233,10 @@ export default function StatsEtablissementPage() {
         // Score équilibre (0-100) : 0 = très déséquilibré, 100 = parfait
         const balanceScoreNormalized = Math.max(0, 100 - (avgBalanceDeviation * 100))
 
-        // Score quiz (0-100)
-        const quizScore = quizStatsData
+        // Score quiz (0-100) - Basé sur la moyenne des quiz complétés (pas besoin que tous aient répondu)
+        const quizScore = quizStatsData && quizStatsData.average_score !== null
           ? (quizStatsData.average_score / 15) * 100
-          : 50 // Valeur neutre si pas de données
+          : 0 // 0 si aucun quiz n'a été rempli
 
         // Score total pondéré
         const totalScore = (gapScore * 0.4) + (coverageScore * 0.3) + (balanceScoreNormalized * 0.2) + (quizScore * 0.1)
@@ -494,8 +497,11 @@ export default function StatsEtablissementPage() {
                     <div className="bg-white rounded-lg p-3 shadow-sm">
                       <div className="text-xs text-gray-500 mb-1">Quiz vigilance (10%)</div>
                       <div className="text-lg font-bold text-violet-600">
-                        {quizStats ? stats.quizScore?.toFixed(0) : "-"}
+                        {quizStats && quizStats.average_score !== null ? stats.quizScore?.toFixed(0) : "0"}
                       </div>
+                      {!quizStats && (
+                        <div className="text-xs text-gray-400">Aucun quiz</div>
+                      )}
                     </div>
                   </div>
 
@@ -520,6 +526,15 @@ export default function StatsEtablissementPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Info Quiz */}
+                {quizStats && (
+  <div className="mt-4 p-3 bg-violet-50 rounded-lg text-sm text-violet-800 text-center">
+    <strong>Quiz de vigilance :</strong> {quizStats.total_respondents} professeur(s) ont répondu - 
+    Moyenne : {quizStats.average_score?.toFixed(1)}/15
+  </div>
+)}
+
               </CardContent>
             </Card>
 
@@ -612,11 +627,12 @@ export default function StatsEtablissementPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-violet-600">
-                    {quizStats ? `${quizStats.average_score.toFixed(1)}/15` : "-"}
+                    {quizStats && quizStats.average_score !== null ? `${quizStats.average_score.toFixed(1)}/15` : "-"}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {quizStats ? `${quizStats.total_respondents} répondant(s)` : "Aucune donnée"}
-                  </p>
+  {quizStats ? `${quizStats.total_respondents} répondant(s)` : "Aucune donnée"}
+</p>
+
                 </CardContent>
               </Card>
             </div>
@@ -721,7 +737,7 @@ export default function StatsEtablissementPage() {
                     const avgGirls = cpActivities.reduce((sum, a) => sum + (a.avg_score_girls || 0), 0) / cpActivities.length
                     const avgBoys = cpActivities.reduce((sum, a) => sum + (a.avg_score_boys || 0), 0) / cpActivities.length
                     const cpLabel = cpActivities[0]?.apsa?.cp?.label
-                    const cpWeight = stats.cpWeight?.[cpCode] || 0
+                    const cpWeightVal = stats.cpWeight?.[cpCode] || 0
 
                     const diffColor = avgDiff < 0.5 ? "text-green-600" : avgDiff < 1 ? "text-yellow-600" : "text-red-600"
 
@@ -736,7 +752,7 @@ export default function StatsEtablissementPage() {
                               {cpLabel}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {cpActivities.length} activité(s) • {cpWeight} classe(s) associée(s)
+                              {cpActivities.length} activité(s) • {cpWeightVal} classe(s) associée(s)
                             </div>
                           </div>
                           <div className="flex items-center gap-6">

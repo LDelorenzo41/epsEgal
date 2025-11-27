@@ -30,7 +30,8 @@ export default function StatsPersoPage() {
   const [chartData, setChartData] = useState([])
   const [trendData, setTrendData] = useState([])
   const [pieData, setPieData] = useState([])
-  const [schoolYear, setSchoolYear] = useState("2025-26")
+  const [schoolYear, setSchoolYear] = useState("2025-2026")
+
 
   const supabase = createClient()
   const router = useRouter()
@@ -151,13 +152,29 @@ export default function StatsPersoPage() {
           personalLabelBg,
         })
 
-        // Prepare bar chart data (by APSA)
-        const chartDataArray = filteredActivities.map((activity) => ({
-          name: activity.apsa?.name || "N/A",
-          "Moy. Filles": parseFloat((activity.avg_score_girls || 0).toFixed(2)),
-          "Moy. Garçons": parseFloat((activity.avg_score_boys || 0).toFixed(2)),
-          "Écart": parseFloat(Math.abs((activity.avg_score_girls || 0) - (activity.avg_score_boys || 0)).toFixed(2)),
-        }))
+        // Prepare bar chart data (regroupé par APSA)
+        const activitiesByAPSA = {}
+        filteredActivities.forEach((activity) => {
+          const apsaName = activity.apsa?.name || "N/A"
+          if (!activitiesByAPSA[apsaName]) {
+            activitiesByAPSA[apsaName] = []
+          }
+          activitiesByAPSA[apsaName].push(activity)
+        })
+
+        const chartDataArray = Object.entries(activitiesByAPSA).map(([apsaName, apsaActivities]) => {
+          const avgGirls = apsaActivities.reduce((sum, a) => sum + (a.avg_score_girls || 0), 0) / apsaActivities.length
+          const avgBoys = apsaActivities.reduce((sum, a) => sum + (a.avg_score_boys || 0), 0) / apsaActivities.length
+          const avgDiff = apsaActivities.reduce((sum, a) => sum + Math.abs((a.avg_score_girls || 0) - (a.avg_score_boys || 0)), 0) / apsaActivities.length
+
+          return {
+            name: apsaName,
+            "Moy. Filles": parseFloat(avgGirls.toFixed(2)),
+            "Moy. Garçons": parseFloat(avgBoys.toFixed(2)),
+            "Écart": parseFloat(avgDiff.toFixed(2)),
+            count: apsaActivities.length,
+          }
+        })
         setChartData(chartDataArray)
 
         // Prepare trend chart data (by period)
@@ -382,12 +399,12 @@ export default function StatsPersoPage() {
               </Card>
             </div>
 
-            {/* Bar Chart - Comparaison par APSA */}
+            {/* Bar Chart - Comparaison par APSA (regroupé) */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle>Comparaison Filles/Garçons par APSA</CardTitle>
                 <CardDescription>
-                  Moyennes détaillées pour chaque activité (CP5 exclue)
+                  Moyennes regroupées par activité (CP5 exclue)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -396,7 +413,13 @@ export default function StatsPersoPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                     <YAxis domain={[0, 20]} />
-                    <Tooltip />
+                    <Tooltip 
+                      formatter={(value, name) => [value, name]}
+                      labelFormatter={(label) => {
+                        const item = chartData.find(d => d.name === label)
+                        return `${label} (${item?.count || 1} évaluation${item?.count > 1 ? 's' : ''})`
+                      }}
+                    />
                     <Legend />
                     <Bar dataKey="Moy. Filles" fill="#ec4899" />
                     <Bar dataKey="Moy. Garçons" fill="#3b82f6" />

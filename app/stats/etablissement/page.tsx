@@ -171,23 +171,16 @@ export default function StatsEtablissementPage() {
           }
         })
 
-        // Calculer le poids de chaque CP (nombre de classes pratiquant)
-        const cpWeight = {}
-        const cpClassCount = {}
-        establishmentApsaClasses.forEach(ac => {
-          const cpCode = ac.apsa?.cp?.code
-          if (cpCode && (!typeConfig.excludeCP5 || cpCode !== "CP5")) {
-            if (!cpClassCount[cpCode]) {
-              cpClassCount[cpCode] = new Set()
-            }
-            cpClassCount[cpCode].add(ac.class_id)
-          }
-        })
+        // Calculer le poids de chaque CP (nombre d'enseignements = somme des associations APSA-classe)
+// Chaque entrée dans apsa_classes compte comme un enseignement de la CP
+const cpWeight = {}
+establishmentApsaClasses.forEach(ac => {
+  const cpCode = ac.apsa?.cp?.code
+  if (cpCode && (!typeConfig.excludeCP5 || cpCode !== "CP5")) {
+    cpWeight[cpCode] = (cpWeight[cpCode] || 0) + 1
+  }
+})
 
-        // Convertir en nombre
-        Object.keys(cpClassCount).forEach(cp => {
-          cpWeight[cp] = cpClassCount[cp].size
-        })
 
         const totalWeight = Object.values(cpWeight).reduce((sum, w) => sum + w, 0)
 
@@ -546,25 +539,26 @@ export default function StatsEtablissementPage() {
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-amber-800">Déséquilibre détecté dans la répartition des CP</h4>
-                      <p className="text-sm text-amber-700 mt-1">
-                        Certaines CP sont sur ou sous-représentées par rapport à une répartition équilibrée.
-                        Pour améliorer votre Label, essayez d'équilibrer le nombre de classes pratiquant chaque CP.
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {Object.entries(stats.cpBalance || {}).map(([cp, data]) => (
-                          <span
-                            key={cp}
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              data.deviation > 0.5
-                                ? "bg-amber-200 text-amber-800"
-                                : "bg-green-100 text-green-700"
-                            }`}
-                          >
-                            {cp}: {data.weight} classe(s) ({data.percentage}%)
-                          </span>
-                        ))}
-                      </div>
+                      <h4 className="font-semibold text-amber-800">Déséquilibre détecté dans la répartition des enseignements par CP</h4>
+<p className="text-sm text-amber-700 mt-1">
+  Certaines CP sont sur ou sous-représentées par rapport à une répartition équilibrée.
+  Pour améliorer votre Label, essayez d'équilibrer le nombre d'enseignements (APSA × classes) dans chaque CP.
+</p>
+<div className="mt-3 flex flex-wrap gap-2">
+  {Object.entries(stats.cpBalance || {}).map(([cp, data]) => (
+    <span
+      key={cp}
+      className={`px-2 py-1 rounded text-xs font-medium ${
+        data.deviation > 0.5
+          ? "bg-amber-200 text-amber-800"
+          : "bg-green-100 text-green-700"
+      }`}
+    >
+      {cp}: {data.weight} enseignement(s) ({data.percentage}%)
+    </span>
+  ))}
+</div>
+
                     </div>
                   </div>
                 )}
@@ -665,10 +659,11 @@ export default function StatsEtablissementPage() {
               {/* Pie Chart - Répartition des CP par nombre de classes */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Poids des CP (nombre de classes)</CardTitle>
-                  <CardDescription>
-                    Répartition des classes par compétence propre
-                  </CardDescription>
+                  <CardTitle>Poids des CP (nombre d'enseignements)</CardTitle>
+<CardDescription>
+  Répartition des enseignements (APSA × classes) par CP
+</CardDescription>
+
                 </CardHeader>
                 <CardContent>
                   {pieChartData.length > 0 ? (
@@ -679,7 +674,7 @@ export default function StatsEtablissementPage() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, value }) => `${name}: ${value} cl.`}
+                          label={({ name, value }) => `${name}: ${value}`}
                           outerRadius={100}
                           fill="#8884d8"
                           dataKey="value"
@@ -693,7 +688,8 @@ export default function StatsEtablissementPage() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-[300px] flex items-center justify-center text-gray-500">
-                      <p>Associez des classes aux APSA pour voir cette répartition</p>
+                      <p>Associez des APSA aux classes pour voir cette répartition</p>
+
                     </div>
                   )}
                 </CardContent>
@@ -753,7 +749,7 @@ export default function StatsEtablissementPage() {
                               {cpLabel}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {cpActivities.length} activité(s) • {cpWeightVal} classe(s) associée(s)
+                              {cpActivities.length} évaluation(s) • {cpWeightVal} enseignement(s)
                             </div>
                           </div>
                           <div className="flex items-center gap-6">

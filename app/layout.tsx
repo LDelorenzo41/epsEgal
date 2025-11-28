@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   title: "EPS Égalité",
   description: "Application de suivi de l'égalité filles-garçons en EPS",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 }
 
 export const viewport = {

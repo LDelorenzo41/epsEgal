@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Info, Award, CheckCircle2, AlertTriangle, XCircle } from "lucide-react"
+import { Info, Award, CheckCircle2, AlertTriangle, XCircle, School, GraduationCap } from "lucide-react"
 
 export function LabelInfoModal() {
   const [open, setOpen] = useState(false)
@@ -41,44 +41,81 @@ export function LabelInfoModal() {
             {/* Introduction */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-gray-700 leading-relaxed">
-                Le <span className="font-semibold text-blue-800">Label Égalité</span> évalue le niveau d'équilibre entre les filles et les garçons dans les pratiques d'EPS de votre établissement. Il est calculé à partir de plusieurs indicateurs objectifs.
+                Le <span className="font-semibold text-blue-800">Label Égalité</span> évalue le niveau d'équilibre entre les filles et les garçons dans les pratiques d'EPS de votre établissement. Il est calculé sur 100 points à partir de 4 critères pondérés.
               </p>
+            </div>
+
+            {/* Type d'établissement */}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Selon votre type d'établissement</h3>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <School className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-bold text-blue-800">Collège</h4>
+                  </div>
+                  <ul className="text-sm text-gray-700 space-y-1">
+                    <li>• <strong>4 CP</strong> prises en compte (CP1 à CP4)</li>
+                    <li>• <strong>CP5 exclue</strong> du calcul</li>
+                    <li>• Objectif : couvrir les 4 CP</li>
+                  </ul>
+                </div>
+                
+                <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <GraduationCap className="h-5 w-5 text-purple-600" />
+                    <h4 className="font-bold text-purple-800">Lycée (GT / Pro)</h4>
+                  </div>
+                  <ul className="text-sm text-gray-700 space-y-1">
+                    <li>• <strong>5 CP</strong> prises en compte (CP1 à CP5)</li>
+                    <li>• <strong>CP5 incluse</strong> dans le calcul</li>
+                    <li>• Objectif : couvrir les 5 CP</li>
+                  </ul>
+                </div>
+              </div>
             </div>
 
             {/* Critères de calcul */}
             <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Critères de calcul (90% du score)</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Les 4 critères de calcul</h3>
               
               <div className="space-y-4">
-                {/* Critère 1 */}
+                {/* Critère 1 - Écart F/G */}
                 <div className="border-l-4 border-blue-500 pl-4 py-2 bg-white rounded-r-lg shadow-sm">
-                  <h4 className="font-semibold text-blue-800 mb-2">1. Écart moyen Filles/Garçons</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-blue-800">1. Écart moyen Filles/Garçons</h4>
+                    <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">40%</span>
+                  </div>
                   <p className="text-sm text-gray-700 mb-2">
-                    Mesure la différence absolue moyenne entre les notes des filles et des garçons sur l'ensemble des activités.
+                    Mesure la différence absolue moyenne entre les notes des filles et des garçons.
                   </p>
                   <div className="bg-gray-50 rounded p-3 text-sm">
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="bg-green-100 rounded p-2">
                         <span className="font-bold text-green-700">&lt; 0.5 pt</span>
-                        <p className="text-xs text-green-600">Excellent</p>
+                        <p className="text-xs text-green-600">100 pts</p>
                       </div>
                       <div className="bg-yellow-100 rounded p-2">
-                        <span className="font-bold text-yellow-700">0.5 - 1 pt</span>
-                        <p className="text-xs text-yellow-600">Acceptable</p>
+                        <span className="font-bold text-yellow-700">1 pt</span>
+                        <p className="text-xs text-yellow-600">50 pts</p>
                       </div>
                       <div className="bg-orange-100 rounded p-2">
-                        <span className="font-bold text-orange-700">&gt; 1 pt</span>
-                        <p className="text-xs text-orange-600">À améliorer</p>
+                        <span className="font-bold text-orange-700">&gt; 2 pts</span>
+                        <p className="text-xs text-orange-600">0 pts</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Critère 2 */}
+                {/* Critère 2 - Couverture CP */}
                 <div className="border-l-4 border-purple-500 pl-4 py-2 bg-white rounded-r-lg shadow-sm">
-                  <h4 className="font-semibold text-purple-800 mb-2">2. Couverture des Compétences Propres</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-purple-800">2. Couverture des Compétences Propres</h4>
+                    <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded">30%</span>
+                  </div>
                   <p className="text-sm text-gray-700 mb-2">
-                    Évalue la diversité des APSA enseignées à travers les 4 CP du collège (CP1 à CP4). La CP5 est exclue du calcul car elle concerne principalement le lycée.
+                    Évalue la diversité des CP enseignées par rapport au nombre attendu pour votre établissement.
                   </p>
                   <div className="bg-gray-50 rounded p-3 text-sm">
                     <ul className="space-y-1 text-gray-600">
@@ -86,23 +123,60 @@ export function LabelInfoModal() {
                       <li><span className="font-medium">CP2</span> - Adaptation à l'environnement</li>
                       <li><span className="font-medium">CP3</span> - Prestation artistique/acrobatique</li>
                       <li><span className="font-medium">CP4</span> - Affrontement individuel/collectif</li>
+                      <li><span className="font-medium">CP5</span> - Entretien de soi <span className="text-purple-600 text-xs">(Lycées uniquement)</span></li>
                     </ul>
                   </div>
                 </div>
 
-                {/* Critère 3 - Quiz */}
-                <div className="border-l-4 border-violet-500 pl-4 py-2 bg-white rounded-r-lg shadow-sm">
-                  <h4 className="font-semibold text-violet-800 mb-2">3. Quiz de vigilance pédagogique (10% du score)</h4>
+                {/* Critère 3 - Équilibre CP */}
+                <div className="border-l-4 border-green-500 pl-4 py-2 bg-white rounded-r-lg shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-green-800">3. Équilibre des CP</h4>
+                    <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">20%</span>
+                  </div>
                   <p className="text-sm text-gray-700 mb-2">
-                    La moyenne des scores des professeurs au quiz de vigilance égalité contribue à 10% du score global du Label.
+                    Mesure la répartition équilibrée des <strong>enseignements</strong> entre les différentes CP. 
+                    Un enseignement = une APSA enseignée à une classe.
                   </p>
-                  <div className="bg-gray-50 rounded p-3 text-sm">
-                    <p className="text-gray-600">
-                      <span className="font-medium">Formule :</span> Score Label = (Indicateurs × 0.9) + (Quiz moyen × 0.1)
-                    </p>
+                  <div className="bg-gray-50 rounded p-3 text-sm text-gray-600">
+                    <p className="mb-2"><span className="font-medium">Objectif :</span></p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Proposer des activités dans <strong>toutes les CP</strong></li>
+                      <li>Avoir un <strong>volume d'enseignement équilibré</strong> par CP</li>
+                    </ul>
+                    <div className="mt-3 p-2 bg-white rounded border">
+                      <p className="text-xs text-gray-500 mb-2">Exemple de calcul :</p>
+                      <ul className="text-xs space-y-1">
+                        <li>• CP1 : Natation (3 classes) + Athlétisme (2 classes) = <strong>5 enseignements</strong></li>
+                        <li>• CP4 : Badminton (1 classe) = <strong>1 enseignement</strong></li>
+                        <li className="text-amber-600">→ Déséquilibre : CP1 est 5× plus enseignée que CP4</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Critère 4 - Quiz */}
+                <div className="border-l-4 border-violet-500 pl-4 py-2 bg-white rounded-r-lg shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-violet-800">4. Quiz de vigilance pédagogique</h4>
+                    <span className="bg-violet-100 text-violet-800 text-xs font-bold px-2 py-1 rounded">10%</span>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-2">
+                    La moyenne des scores des professeurs au quiz de vigilance égalité. Basé sur les réponses des enseignants ayant complété le quiz.
+                  </p>
+                  <div className="bg-gray-50 rounded p-3 text-sm text-gray-600">
+                    <p><span className="font-medium">Score max :</span> 15 points au quiz = 100% de contribution</p>
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Formule */}
+            <div className="bg-gray-800 text-white rounded-lg p-4">
+              <h3 className="font-bold mb-2">Formule de calcul</h3>
+              <p className="font-mono text-sm">
+                Score = (Écart F/G × 0.40) + (Couverture CP × 0.30) + (Équilibre CP × 0.20) + (Quiz × 0.10)
+              </p>
             </div>
 
             {/* Les 3 Labels */}
@@ -117,23 +191,13 @@ export function LabelInfoModal() {
                       <CheckCircle2 className="h-6 w-6 text-green-700" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-green-800 text-lg">Équilibré</h4>
-                      <p className="text-sm text-green-700 mt-1 mb-3">
-                        Félicitations ! Votre établissement présente un excellent équilibre.
-                      </p>
-                      <div className="bg-white rounded p-3 text-sm">
-                        <p className="font-medium text-gray-800 mb-2">Conditions requises :</p>
-                        <ul className="space-y-1 text-gray-600">
-                          <li className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            Écart moyen F/G inférieur à 0.5 point
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            4 CP sur 4 couvertes (CP1 à CP4)
-                          </li>
-                        </ul>
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-bold text-green-800 text-lg">Équilibré</h4>
+                        <span className="bg-green-200 text-green-800 text-sm font-bold px-3 py-1 rounded-full">75 - 100 pts</span>
                       </div>
+                      <p className="text-sm text-green-700 mt-1">
+                        Félicitations ! Votre établissement présente un excellent équilibre entre filles et garçons.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -145,23 +209,13 @@ export function LabelInfoModal() {
                       <AlertTriangle className="h-6 w-6 text-yellow-700" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-yellow-800 text-lg">En progrès</h4>
-                      <p className="text-sm text-yellow-700 mt-1 mb-3">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-bold text-yellow-800 text-lg">En progrès</h4>
+                        <span className="bg-yellow-200 text-yellow-800 text-sm font-bold px-3 py-1 rounded-full">50 - 74 pts</span>
+                      </div>
+                      <p className="text-sm text-yellow-700 mt-1">
                         Votre établissement progresse vers l'égalité. Continuez vos efforts !
                       </p>
-                      <div className="bg-white rounded p-3 text-sm">
-                        <p className="font-medium text-gray-800 mb-2">Conditions (au moins une) :</p>
-                        <ul className="space-y-1 text-gray-600">
-                          <li className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                            Au moins 3 CP couvertes sur 4
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                            OU Écart moyen F/G inférieur à 1 point
-                          </li>
-                        </ul>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -173,23 +227,13 @@ export function LabelInfoModal() {
                       <XCircle className="h-6 w-6 text-orange-700" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-orange-800 text-lg">À renforcer</h4>
-                      <p className="text-sm text-orange-700 mt-1 mb-3">
-                        Des efforts sont nécessaires pour améliorer l'égalité F/G.
-                      </p>
-                      <div className="bg-white rounded p-3 text-sm">
-                        <p className="font-medium text-gray-800 mb-2">Situation :</p>
-                        <ul className="space-y-1 text-gray-600">
-                          <li className="flex items-center gap-2">
-                            <XCircle className="h-4 w-4 text-orange-600" />
-                            Moins de 3 CP couvertes
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <XCircle className="h-4 w-4 text-orange-600" />
-                            ET Écart moyen F/G supérieur ou égal à 1 point
-                          </li>
-                        </ul>
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-bold text-orange-800 text-lg">À renforcer</h4>
+                        <span className="bg-orange-200 text-orange-800 text-sm font-bold px-3 py-1 rounded-full">0 - 49 pts</span>
                       </div>
+                      <p className="text-sm text-orange-700 mt-1">
+                        Des efforts sont nécessaires pour améliorer l'égalité F/G dans votre établissement.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -202,19 +246,19 @@ export function LabelInfoModal() {
               <ul className="space-y-2 text-sm text-gray-700">
                 <li className="flex items-start gap-2">
                   <span className="font-bold text-blue-600">1.</span>
-                  <span>Diversifiez les APSA pour couvrir les 4 compétences propres du collège</span>
+                  <span>Diversifiez les APSA pour couvrir toutes les CP de votre niveau</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-bold text-blue-600">2.</span>
-                  <span>Adaptez vos évaluations pour valoriser les apprentissages plutôt que la performance brute</span>
+                  <span>Équilibrez le volume d'enseignement entre les CP (évitez de sur-représenter une CP)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-bold text-blue-600">3.</span>
-                  <span>Utilisez des formes de pratique scolaire (FPS) inclusives</span>
+                  <span>Adaptez vos évaluations pour valoriser les apprentissages plutôt que la performance brute</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-bold text-blue-600">4.</span>
-                  <span>Complétez le quiz de vigilance pour sensibiliser l'équipe</span>
+                  <span>Invitez tous les professeurs à compléter le quiz de vigilance</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-bold text-blue-600">5.</span>

@@ -107,10 +107,11 @@ function getCurrentSchoolYear(): string {
   const year = now.getFullYear()
   const month = now.getMonth() + 1
   
+  // Format court: 2024-25 (pour correspondre au reste de l'application)
   if (month >= 9) {
-    return `${year}-${year + 1}`
+    return `${year}-${(year + 1).toString().slice(2)}`
   }
-  return `${year - 1}-${year}`
+  return `${year - 1}-${year.toString().slice(2)}`
 }
 
 interface VigilanceQuizProps {
@@ -618,3 +619,4 @@ export function VigilanceQuiz({ userId, schoolId }: VigilanceQuizProps) {
     </Dialog>
   )
 }
+

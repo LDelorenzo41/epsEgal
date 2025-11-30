@@ -43,6 +43,7 @@ type ClassActivity = {
   teacher_class_id: string
   apsa_id: string
   period: string | null
+  school_year: string | null
   avg_score_total: number | null
   avg_score_girls: number | null
   avg_score_boys: number | null
@@ -61,6 +62,14 @@ type Props = {
   availableClasses: Class[]
   availableApsas: APSA[]
 }
+
+const PERIOD_OPTIONS = [
+  { value: "Trimestre 1", label: "Trimestre 1" },
+  { value: "Trimestre 2", label: "Trimestre 2" },
+  { value: "Trimestre 3", label: "Trimestre 3" },
+  { value: "Semestre 1", label: "Semestre 1" },
+  { value: "Semestre 2", label: "Semestre 2" },
+]
 
 export function PersoManager({
   teacherId,
@@ -81,15 +90,15 @@ export function PersoManager({
   const [activities, setActivities] = useState<ClassActivity[]>(initialActivities)
   const [showActivityForm, setShowActivityForm] = useState(false)
   const [activityForm, setActivityForm] = useState({
-  id: "",
-  teacher_class_id: "",
-  apsa_id: "",
-  period: "",
-  school_year: "2025-26", // AJOUTE CETTE LIGNE
-  avg_score_total: "",
-  avg_score_girls: "",
-  avg_score_boys: "",
-})
+    id: "",
+    teacher_class_id: "",
+    apsa_id: "",
+    period: "",
+    school_year: "2025-26",
+    avg_score_total: "",
+    avg_score_girls: "",
+    avg_score_boys: "",
+  })
 
   // ===== TEACHER CLASSES CRUD =====
 
@@ -184,13 +193,13 @@ export function PersoManager({
     }
 
     const data = {
-  teacher_class_id: activityForm.teacher_class_id,
-  apsa_id: activityForm.apsa_id,
-  period: activityForm.period || null,
-  school_year: activityForm.school_year || "2025-26", // AJOUTE CETTE LIGNE
-  avg_score_total: activityForm.avg_score_total
-    ? parseFloat(activityForm.avg_score_total)
-    : null,
+      teacher_class_id: activityForm.teacher_class_id,
+      apsa_id: activityForm.apsa_id,
+      period: activityForm.period || null,
+      school_year: activityForm.school_year || "2025-26",
+      avg_score_total: activityForm.avg_score_total
+        ? parseFloat(activityForm.avg_score_total)
+        : null,
       avg_score_girls: activityForm.avg_score_girls
         ? parseFloat(activityForm.avg_score_girls)
         : null,
@@ -279,6 +288,7 @@ export function PersoManager({
       teacher_class_id: "",
       apsa_id: "",
       period: "",
+      school_year: "2025-26",
       avg_score_total: "",
       avg_score_girls: "",
       avg_score_boys: "",
@@ -291,6 +301,7 @@ export function PersoManager({
       teacher_class_id: activity.teacher_class_id,
       apsa_id: activity.apsa_id,
       period: activity.period || "",
+      school_year: activity.school_year || "2025-26",
       avg_score_total: activity.avg_score_total?.toString() || "",
       avg_score_girls: activity.avg_score_girls?.toString() || "",
       avg_score_boys: activity.avg_score_boys?.toString() || "",
@@ -323,6 +334,7 @@ export function PersoManager({
       teacher_class_id: "",
       apsa_id: "",
       period: "",
+      school_year: "2025-26",
       avg_score_total: "",
       avg_score_girls: "",
       avg_score_boys: "",
@@ -446,6 +458,7 @@ export function PersoManager({
                   teacher_class_id: "",
                   apsa_id: "",
                   period: "",
+                  school_year: "2025-26",
                   avg_score_total: "",
                   avg_score_girls: "",
                   avg_score_boys: "",
@@ -472,58 +485,91 @@ export function PersoManager({
                 {activityForm.id ? "Modifier" : "Ajouter"} une activité
               </h3>
               <div className="grid gap-4">
-                <div>
-                  <Label htmlFor="activity-class">Classe *</Label>
-                  <Select
-                    value={activityForm.teacher_class_id}
-                    onValueChange={(value) =>
-                      setActivityForm({ ...activityForm, teacher_class_id: value })
-                    }
-                  >
-                    <SelectTrigger id="activity-class">
-                      <SelectValue placeholder="Sélectionner une classe" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teacherClasses.map((tc) => (
-                        <SelectItem key={tc.id} value={tc.id}>
-                          {tc.classes?.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="activity-class">Classe *</Label>
+                    <Select
+                      value={activityForm.teacher_class_id}
+                      onValueChange={(value) =>
+                        setActivityForm({ ...activityForm, teacher_class_id: value })
+                      }
+                    >
+                      <SelectTrigger id="activity-class">
+                        <SelectValue placeholder="Sélectionner une classe" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teacherClasses.map((tc) => (
+                          <SelectItem key={tc.id} value={tc.id}>
+                            {tc.classes?.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="activity-apsa">APSA *</Label>
+                    <Select
+                      value={activityForm.apsa_id}
+                      onValueChange={(value) =>
+                        setActivityForm({ ...activityForm, apsa_id: value })
+                      }
+                    >
+                      <SelectTrigger id="activity-apsa">
+                        <SelectValue placeholder="Sélectionner une APSA" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableApsas.map((apsa) => (
+                          <SelectItem key={apsa.id} value={apsa.id}>
+                            {apsa.name} ({apsa.cp?.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="activity-apsa">APSA *</Label>
-                  <Select
-                    value={activityForm.apsa_id}
-                    onValueChange={(value) =>
-                      setActivityForm({ ...activityForm, apsa_id: value })
-                    }
-                  >
-                    <SelectTrigger id="activity-apsa">
-                      <SelectValue placeholder="Sélectionner une APSA" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableApsas.map((apsa) => (
-                        <SelectItem key={apsa.id} value={apsa.id}>
-                          {apsa.name} ({apsa.cp?.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="activity-period">Période</Label>
+                    <Select
+                      value={activityForm.period}
+                      onValueChange={(value) =>
+                        setActivityForm({ ...activityForm, period: value })
+                      }
+                    >
+                      <SelectTrigger id="activity-period">
+                        <SelectValue placeholder="Sélectionner une période" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PERIOD_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div>
-                  <Label htmlFor="activity-period">Période</Label>
-                  <Input
-                    id="activity-period"
-                    placeholder="Ex: Septembre-Octobre, P1, Trimestre 1..."
-                    value={activityForm.period}
-                    onChange={(e) =>
-                      setActivityForm({ ...activityForm, period: e.target.value })
-                    }
-                  />
+                  <div>
+                    <Label htmlFor="activity-year">Année scolaire</Label>
+                    <Select
+                      value={activityForm.school_year}
+                      onValueChange={(value) =>
+                        setActivityForm({ ...activityForm, school_year: value })
+                      }
+                    >
+                      <SelectTrigger id="activity-year">
+                        <SelectValue placeholder="Sélectionner l'année" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2023-24">2023-24</SelectItem>
+                        <SelectItem value="2024-25">2024-25</SelectItem>
+                        <SelectItem value="2025-26">2025-26 (actuelle)</SelectItem>
+                        <SelectItem value="2026-27">2026-27</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -541,27 +587,6 @@ export function PersoManager({
                     />
                   </div>
                   <div>
-                    {/* AJOUTE CE NOUVEAU CHAMP JUSTE APRÈS */}
-<div>
-  <Label htmlFor="activity-year">Année scolaire</Label>
-  <Select
-    value={activityForm.school_year || "2025-26"}
-    onValueChange={(value) =>
-      setActivityForm({ ...activityForm, school_year: value })
-    }
-  >
-    <SelectTrigger id="activity-year">
-      <SelectValue placeholder="Sélectionner l'année" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="2023-24">2023-24</SelectItem>
-      <SelectItem value="2024-25">2024-25</SelectItem>
-      <SelectItem value="2025-26">2025-26 (actuelle)</SelectItem>
-      <SelectItem value="2026-27">2026-27</SelectItem>
-      <SelectItem value="2027-28">2027-28</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
                     <Label htmlFor="avg-girls">Moyenne Filles</Label>
                     <Input
                       id="avg-girls"

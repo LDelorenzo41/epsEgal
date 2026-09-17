@@ -206,7 +206,7 @@ Conséquence pratique : le module n'est **pas** une section de premier niveau de
 Tant que le module n'est pas jugé complet et correct, il est accessible **à un seul compte**, celui du propriétaire du produit :
 
 > **Compte autorisé en phase 1 : `delorenzo.lionel@orange.fr`**
-> ⚠️ **À confirmer** — adresse transmise sous la forme `delorenzo.Lionel@orange.f`. L'extension `.fr` et la casse sont des reconstitutions. Voir §2.4.5.
+> Adresse **confirmée** par le propriétaire du produit : c'est son adresse de connexion à coordo-eps.
 
 Pendant cette phase :
 
@@ -253,12 +253,15 @@ L'ouverture progressive est prévue dès la conception, en trois crans, du plus 
 
 **Le modèle de droits de §2.3 reste la cible.** En phase 1, il n'a simplement pas d'effet observable, puisqu'un seul compte accède au module. Il doit malgré tout être implémenté dès le départ : le découvrir au cran 2, avec de vraies données d'équipe, serait une reprise coûteuse.
 
-#### 2.4.5 ⚠️ Deux points à confirmer avant écriture du code
+#### 2.4.5 Mise en œuvre du contrôle d'adresse
 
-1. **L'adresse exacte.** Telle que transmise, `delorenzo.Lionel@orange.f` comporte une extension à une lettre et une majuscule. La reconstitution retenue est `delorenzo.lionel@orange.fr`. **Une erreur d'un caractère sur cette valeur bloque l'accès au seul compte autorisé.**
-2. **Le compte de connexion réel.** L'adresse d'exploitation connue par ailleurs est `lionel.delorenzo@teachtech.fr`. Si le compte coordo-eps est ouvert sous cette adresse et non sous l'adresse Orange, c'est celle-ci qu'il faut autoriser — ou les deux.
+**Valeur retenue, confirmée** : `delorenzo.lionel@orange.fr`, adresse de connexion du propriétaire à coordo-eps.
 
-**[RECO]** : normaliser en minuscules des deux côtés de la comparaison, et prévoir une **liste** d'adresses dès le départ plutôt qu'une valeur unique. Le surcoût est nul, et cela couvre les deux cas ci-dessus sans arbitrage.
+Trois précautions d'implémentation :
+
+1. **Normaliser en minuscules des deux côtés de la comparaison.** L'adresse enregistrée sur un compte peut différer par la casse de celle saisie à la connexion.
+2. **Stocker une liste d'adresses, pas une valeur unique.** Le surcoût est nul et cela évite une reprise au premier testeur ajouté.
+3. **Ne comparer que sur une adresse vérifiée** par le fournisseur d'authentification, jamais sur une valeur modifiable par l'utilisateur lui-même.
 
 ---
 
@@ -2682,6 +2685,7 @@ Tout membre peut supprimer la programmation commune de toute l'équipe, sans tra
 - [ ] Tout autre compte, **interrogation directe des tables du module** : aucune ligne retournée
 - [ ] Non connecté : aucun accès, aucune donnée
 - [ ] L'adresse autorisée est **modifiable sans déploiement**
+- [ ] La comparaison d'adresse est insensible à la casse
 - [ ] L'autorisation est évaluée par **un seul point de contrôle**, identifiable dans le code
 
 **Non-régression de l'hôte**

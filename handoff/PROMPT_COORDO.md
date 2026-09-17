@@ -2,10 +2,38 @@
 
 ## Mode d'emploi *(ne pas copier)*
 
-1. Copier `handoff/SPEC_EGALITE.md` dans le dépôt coordo-eps, à l'emplacement `docs/egalite/SPEC_EGALITE.md`.
-2. Ouvrir une **nouvelle session Claude Code** à la racine du dépôt coordo-eps.
-3. Copier-coller **tout ce qui suit la ligne de séparation**, jusqu'à la fin du fichier.
-4. Ne rien ajouter d'autre dans le premier message : le prompt demande explicitement une phase d'analyse sans code.
+### Étape 1 — Déposer la spec dans le dépôt coordo-eps, **avant** d'ouvrir la session
+
+Le fichier `SPEC_EGALITE.md` doit être **commité dans le dépôt coordo-eps**, à l'emplacement `docs/egalite/SPEC_EGALITE.md`. Pas en pièce jointe de conversation.
+
+Trois raisons :
+
+- le prompt demande à la session de **lire ce chemin** ;
+- il y aura **plusieurs sessions** (une par lot) : chacune doit retrouver la spec sans que tu aies à la rattacher ;
+- une pièce jointe de 2 700 lignes est rechargée à chaque conversation, alors qu'un fichier du dépôt est lu à la demande, par morceaux.
+
+Au choix :
+
+- **via l'interface GitHub** — dépôt coordo-eps → *Add file* → *Upload files* → déposer le fichier en le renommant `docs/egalite/SPEC_EGALITE.md` → commit sur une branche dédiée ;
+- **en local** — copier le fichier dans `docs/egalite/`, puis commit et push sur une branche dédiée.
+
+### Étape 2 — Ouvrir la session
+
+Ouvrir une **nouvelle session Claude Code** sur le dépôt coordo-eps, en s'assurant qu'elle travaille sur une **branche dédiée**, jamais sur `main`.
+
+### Étape 3 — Lancer le prompt
+
+Copier-coller **tout ce qui suit la ligne de séparation**, jusqu'à la fin du fichier. Ne rien ajouter d'autre dans le premier message : le prompt demande explicitement une phase d'analyse **sans code**, et se termine par une demande de validation.
+
+### Étape 4 — Ce qui doit arriver en retour
+
+La session doit répondre par une **analyse**, pas par du code. Si elle commence à écrire des fichiers ou des migrations dès le premier tour, interromps-la et renvoie-la à la section 5 du prompt.
+
+Trois points à vérifier dans sa réponse :
+
+1. elle a **lu la spec** (elle cite des sections numérotées) ;
+2. elle a tranché sur **P1** — l'affectation enseignant ↔ classes existe-t-elle, et est-elle datée par année scolaire ? Si P1 manque, tout s'arrête là ;
+3. elle a produit la **recette d'intégration de « Schéma »** : quels fichiers toucher, dans quel ordre, pour ajouter une entrée au menu Outils.
 
 ---
 
@@ -49,7 +77,11 @@ Trois sections à lire avec une attention particulière :
 
 coordo-eps est **en production, avec des utilisateurs réels**. Le module est un ajout, jamais une refonte. Cette contrainte prime sur toutes les autres, y compris sur l'élégance de l'architecture et sur le délai.
 
-Huit règles, non négociables :
+Neuf règles, non négociables :
+
+### 3.0 Branche dédiée, jamais `main`
+
+coordo-eps est en production. Tout le travail se fait sur une **branche dédiée au module**, créée depuis la branche par défaut. Aucun commit direct sur `main`. Aucune fusion sans ma validation explicite.
 
 ### 3.1 Code isolé dans un dossier dédié
 
@@ -85,8 +117,9 @@ Le module est une **entrée du menu « Outils »**, au même niveau que la fonct
 
 **Tant que le module n'est pas complet et vérifié, il n'est accessible qu'à un seul compte : le mien.**
 
-> **Compte autorisé : `delorenzo.lionel@orange.fr`**
-> ⚠️ **Demande-moi confirmation de cette adresse avant de l'écrire où que ce soit.** Je te l'ai transmise sous la forme `delorenzo.Lionel@orange.f` ; l'extension et la casse sont des reconstitutions. Vérifie aussi sous quelle adresse mon compte coordo-eps est réellement ouvert : ce peut être `lionel.delorenzo@teachtech.fr`. Une erreur d'un caractère me bloque l'accès au seul compte autorisé.
+> **Compte autorisé : `delorenzo.lionel@orange.fr`** — c'est mon adresse de connexion à coordo-eps.
+
+Trois précautions : comparaison **insensible à la casse**, stockage d'une **liste** d'adresses plutôt que d'une valeur unique, et comparaison sur une adresse **vérifiée par le fournisseur d'authentification**, jamais sur une valeur que l'utilisateur peut modifier lui-même.
 
 **Trois exigences, détaillées en §2.4 de la spec :**
 
@@ -219,6 +252,5 @@ Liste les décisions qui m'appartiennent et que tu ne peux pas prendre seul. Pou
 - **Réponds en français**, de façon structurée et directe, sans remplissage.
 - Si une information te manque pour décider, **demande-la** au lieu de supposer.
 - Si tu constates que la spécification contredit ce que tu observes dans coordo-eps, **signale-le** : la spécification décrit une application autonome, pas coordo-eps.
-- **Demande-moi confirmation de l'adresse e-mail autorisée** (§3.6) avant de l'écrire dans un fichier ou une migration.
 
 Commence par lire `docs/egalite/SPEC_EGALITE.md`, puis livre-moi l'étape 1.

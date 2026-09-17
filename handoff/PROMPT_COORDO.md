@@ -25,6 +25,11 @@ EPS Égalité permet à une équipe EPS de se situer objectivement sur l'égalit
 
 Le module existe aujourd'hui sous forme d'une application autonome. **Nous ne reprenons ni son code, ni ses données** : la base est vierge et nous repartons de zéro, comme module intégré.
 
+**Deux contraintes d'intégration, à retenir dès maintenant :**
+
+- Le module s'atteint **depuis le menu « Outils », exactement comme la fonctionnalité « Schéma »**. Le motif d'intégration de « Schéma » est le modèle à reproduire.
+- **En phase de mise au point, le module n'est accessible qu'à un seul compte : le mien.** Aucun autre utilisateur ne doit ni le voir, ni y accéder, ni lire ses données. L'ouverture à tous viendra plus tard, une fois le module complet et vérifié.
+
 ## 2. Première action attendue
 
 **Lis intégralement `docs/egalite/SPEC_EGALITE.md`** avant toute autre chose.
@@ -36,6 +41,7 @@ Ce document est indépendant de toute technologie. Il te dit **quoi** construire
 Trois sections à lire avec une attention particulière :
 
 - **§0.4 — les trois prérequis** que coordo-eps doit fournir au module. Ta toute première tâche d'analyse est de vérifier s'ils sont satisfaits.
+- **§2.4 — point d'entrée et restriction d'accès** : menu Outils sur le modèle de « Schéma », et accès limité à un seul compte en phase 1.
 - **§5 — la logique de calcul.** Chaque formule y est donnée avec un exemple chiffré vérifiable. Le jeu de données de §5.0 sert de test de recette.
 - **§9 — les défauts identifiés.** La spécification décrit l'existant *et* signale ce qui est faux. Les points marqués **[RECO]** sont les corrections à appliquer dans la reconstruction ; les points marqués **[BOGUÉ]** ne doivent **pas** être reproduits.
 
@@ -43,7 +49,7 @@ Trois sections à lire avec une attention particulière :
 
 coordo-eps est **en production, avec des utilisateurs réels**. Le module est un ajout, jamais une refonte. Cette contrainte prime sur toutes les autres, y compris sur l'élégance de l'architecture et sur le délai.
 
-Sept règles, non négociables :
+Huit règles, non négociables :
 
 ### 3.1 Code isolé dans un dossier dédié
 
@@ -69,14 +75,42 @@ Toute table, vue, fonction, déclencheur, type ou politique créé par le module
 - Les politiques dérivent de la logique d'appartenance **déjà utilisée par coordo-eps**. Tu ne réimplémentes pas cette logique : tu l'appelles.
 - Les réponses individuelles au quiz ne sont accessibles qu'à leur auteur, jamais aux collègues, même en lecture.
 
-### 3.5 Drapeau de fonctionnalité désactivé par défaut
+### 3.5 Point d'entrée : le menu « Outils », sur le modèle de « Schéma »
 
-- Le module est **inactif par défaut**, pour tous les établissements.
-- Drapeau inactif = aucune entrée de menu, aucune route accessible, aucune requête émise, aucun coût de chargement.
-- L'activation se fait par établissement (ou par équipe, selon l'arbitrage de §7.5.3 de la spec), pas globalement.
-- Le comportement de coordo-eps avec le drapeau inactif doit être **strictement identique** à son comportement actuel.
+Le module est une **entrée du menu « Outils »**, au même niveau que la fonctionnalité **« Schéma »**. Ce n'est pas une section de premier niveau : il ne modifie pas la navigation principale, ni le tableau de bord, ni aucun écran existant de coordo-eps.
 
-### 3.6 Tout fichier existant modifié est annoncé et justifié
+**Analyse d'abord comment « Schéma » est intégré** — entrée de menu, déclaration de route, structure de page, contrôle d'accès, conventions d'interface — et **reproduis ce motif à l'identique**. Toute divergence doit être justifiée explicitement. C'est le point le plus concret de ton analyse d'architecture : si tu comprends comment « Schéma » s'intègre, tu sais comment intégrer EPS Égalité.
+
+### 3.6 Accès restreint à un seul compte en phase 1
+
+**Tant que le module n'est pas complet et vérifié, il n'est accessible qu'à un seul compte : le mien.**
+
+> **Compte autorisé : `delorenzo.lionel@orange.fr`**
+> ⚠️ **Demande-moi confirmation de cette adresse avant de l'écrire où que ce soit.** Je te l'ai transmise sous la forme `delorenzo.Lionel@orange.f` ; l'extension et la casse sont des reconstitutions. Vérifie aussi sous quelle adresse mon compte coordo-eps est réellement ouvert : ce peut être `lionel.delorenzo@teachtech.fr`. Une erreur d'un caractère me bloque l'accès au seul compte autorisé.
+
+**Trois exigences, détaillées en §2.4 de la spec :**
+
+**① Le contrôle s'applique à trois niveaux, pas un seul.**
+
+Masquer l'entrée de menu ne protège rien : les routes restent atteignables par l'URL et les tables restent interrogeables par l'API de données.
+
+| Niveau | Comportement attendu pour un compte non autorisé |
+|---|---|
+| Interface | L'entrée de menu n'est pas rendue |
+| Route / serveur | L'accès direct à l'URL renvoie une page inexistante ou une redirection — **pas** un « accès refusé » qui révélerait l'existence du module |
+| Base de données (RLS) | **Chaque politique du module** intègre la condition d'autorisation. Aucune ligne lisible, même avec un jeton valide |
+
+La couche base de données est la seule réellement contraignante. **C'est elle que je vérifierai.**
+
+**② Un point de contrôle unique.** L'autorisation est évaluée par une seule fonction, appelée partout. Le jour de l'ouverture, une seule ligne doit changer.
+
+**③ La liste d'accès n'est pas figée dans le code.** Elle vit en base ou en variable d'environnement, jamais en dur dans un composant. Ajouter un premier collègue testeur doit être une opération de données, pas un déploiement. Prévois une **liste** d'adresses dès le départ, pas une valeur unique.
+
+**Conçois l'ouverture dès le lot 1.** Le point de contrôle doit savoir répondre aux trois crans prévus : compte nominatif → établissements pilotes → tous. Un contrôle qui ne sait faire que « cette adresse ou rien » devra être réécrit deux fois.
+
+**Le modèle de droits de §3.8 reste la cible** et doit être implémenté dès le départ, même s'il n'a aucun effet observable tant qu'un seul compte accède au module. Le découvrir plus tard, avec de vraies données d'équipe, serait une reprise coûteuse.
+
+### 3.7 Tout fichier existant modifié est annoncé et justifié
 
 Pour chaque fichier de coordo-eps que tu touches :
 
@@ -85,9 +119,9 @@ Pour chaque fichier de coordo-eps que tu touches :
 3. tu montres la modification minimale qui répond au besoin ;
 4. tu indiques comment vérifier l'absence de régression.
 
-Un point d'entrée de menu et un enregistrement de route sont attendus. Au-delà, chaque fichier touché doit être défendu.
+L'ajout d'une entrée dans le menu « Outils » et l'enregistrement d'une route sont attendus — et devraient suffire. Au-delà, chaque fichier touché doit être défendu.
 
-### 3.7 Droits d'écriture — modèle retenu
+### 3.8 Droits d'écriture — modèle retenu
 
 **Tous les enseignants membres de l'équipe EPS ont les mêmes droits de lecture et d'écriture** sur les données du module de leur établissement. Il n'y a pas de rôle privilégié au sein du module.
 
@@ -130,7 +164,20 @@ Explore coordo-eps et rends-moi une synthèse structurée :
 - existe-t-il déjà un **mécanisme de drapeau de fonctionnalité** ?
 - quelles **conventions d'interface** dois-je respecter (bibliothèque de composants, graphiques, notifications, fenêtres modales) ?
 
-**e) Points de vigilance**
+**e) Le motif d'intégration de « Schéma »** — à traiter avec le même soin que les prérequis
+
+- où est déclaré le **menu « Outils »**, et comment une entrée y est ajoutée ;
+- comment la route de « Schéma » est déclarée et protégée ;
+- comment « Schéma » identifie l'utilisateur courant et contrôle son accès ;
+- quelle structure de page, quelle mise en page, quelles conventions d'interface il applique ;
+- où vivent ses tables, comment ses politiques RLS sont écrites ;
+- s'il existe déjà un mécanisme de restriction par compte ou par établissement, **réutilise-le** plutôt que d'en créer un.
+
+Rends-moi ce motif sous forme de **recette reproductible** : « pour ajouter un outil au menu, il faut toucher tel et tel fichier, dans cet ordre ». C'est la base du lot 1.
+
+**f) Comment identifier l'utilisateur par son adresse e-mail**, côté serveur **et** à l'intérieur d'une politique RLS. Conditionne toute la restriction d'accès de §3.6.
+
+**g) Points de vigilance**
 - zones du code qu'il vaut mieux ne pas toucher ;
 - fichiers qu'il faudra probablement modifier, et pourquoi ;
 - dépendances à ajouter, le cas échéant, avec justification.
@@ -153,7 +200,7 @@ Ordonne les lots par valeur décroissante, et indique lesquels sont parallélisa
 
 Suggestion de découpage, à critiquer librement — c'est ta proposition qui compte, pas la mienne :
 
-1. Fondations : drapeau de fonctionnalité, schéma, RLS, référentiel des compétences propres, coquille de navigation ;
+1. **Fondations et accès** : entrée dans le menu Outils sur le modèle de « Schéma », point de contrôle d'accès unique restreint à mon compte, schéma de base, RLS sur chaque table, référentiel des compétences propres, coquille de page vide mais accessible. **Ce lot est livrable et vérifiable seul** : je dois pouvoir constater que je vois l'entrée, que personne d'autre ne la voit, et que coordo-eps est inchangé par ailleurs ;
 2. Programmation : APSA, rattachement aux compétences propres, association APSA ↔ classes par année ;
 3. Saisie des moyennes filles / garçons ;
 4. Calculs et restitutions personnelles ;
@@ -172,5 +219,6 @@ Liste les décisions qui m'appartiennent et que tu ne peux pas prendre seul. Pou
 - **Réponds en français**, de façon structurée et directe, sans remplissage.
 - Si une information te manque pour décider, **demande-la** au lieu de supposer.
 - Si tu constates que la spécification contredit ce que tu observes dans coordo-eps, **signale-le** : la spécification décrit une application autonome, pas coordo-eps.
+- **Demande-moi confirmation de l'adresse e-mail autorisée** (§3.6) avant de l'écrire dans un fichier ou une migration.
 
 Commence par lire `docs/egalite/SPEC_EGALITE.md`, puis livre-moi l'étape 1.

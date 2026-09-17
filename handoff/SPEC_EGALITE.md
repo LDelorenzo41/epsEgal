@@ -14,7 +14,7 @@
 |---|---|---|
 | **0** | [Comment lire ce document](#0-comment-lire-ce-document) | Conventions, arbitrages appliqués, **trois prérequis fermes attendus de l'hôte** |
 | **1** | [Objectif et public](#1-objectif-et-public-du-module) | Problème métier, périmètre, vocabulaire |
-| **2** | [Rôles et droits](#2-rôles-et-droits) | Matrice existante, modèle retenu pour coordo-eps |
+| **2** | [Rôles et droits](#2-rôles-et-droits) | Matrice existante, modèle retenu, **point d'entrée menu Outils et accès restreint** |
 | **3** | [Parcours écran par écran](#3-parcours-utilisateur-écran-par-écran) | 12 écrans : contenu, actions, états vides, messages |
 | **4** | [Contenus métier complets](#4-contenus-métier-complets) | Référentiel CP, **questions du quiz**, textes d'interprétation, bibliographie — recopiés à l'identique |
 | **5** | [Logique de calcul](#5-logique-de-calcul-complète) | 13 calculs, formules, seuils, arrondis, **exemples chiffrés** |
@@ -27,10 +27,11 @@
 **Les cinq points à lire en priorité**
 
 1. **§0.4** — les trois prérequis (P1 affectation enseignant↔classes, P2 sexe de l'enseignant, P3 effectifs F/G par classe). P1 est bloquant.
-2. **§5.7** — le calcul du Label Égalité, seule formule de référence, avec son exemple chiffré complet.
-3. **§7.3** — le schéma de production diverge des migrations sur 8 objets : la base d'origine n'est pas reconstructible.
-4. **§9.2.7** — trois labels contradictoires coexistent dans l'application actuelle.
-5. **§9.4.2** — risque de ré-identification des personnes dans les équipes de petite taille.
+2. **§2.4** — intégration au menu Outils sur le modèle de « Schéma », et restriction d'accès à un seul compte en phase 1.
+3. **§5.7** — le calcul du Label Égalité, seule formule de référence, avec son exemple chiffré complet.
+4. **§7.3** — le schéma de production diverge des migrations sur 8 objets : la base d'origine n'est pas reconstructible.
+5. **§9.2.7** — trois labels contradictoires coexistent dans l'application actuelle.
+6. **§9.4.2** — risque de ré-identification des personnes dans les équipes de petite taille.
 
 ---
 
@@ -76,6 +77,8 @@ Le module ne reconstruit **pas** ces données, il les consomme. Ce sont des cond
 ### 0.5 Droits d'écriture — décision retenue
 
 **Tous les enseignants membres d'une équipe EPS disposent des mêmes droits de lecture et d'écriture** sur les données du module de leur établissement. Il n'y a pas de rôle « coordonnateur » privilégié au sein du module. Voir §2.
+
+**En phase de mise au point, le module n'est toutefois accessible qu'à un seul compte nominatif**, et il est atteint depuis le **menu « Outils »** de coordo-eps, sur le modèle de la fonctionnalité « Schéma ». Voir §2.4.
 
 ---
 
@@ -187,6 +190,77 @@ Périmètre : un utilisateur authentifié `U` rattaché à l'établissement `E`.
 1. **Cloisonnement établissement** : aucune donnée du module n'est lisible hors de l'établissement auquel elle appartient. À dériver de la notion d'appartenance déjà gérée par coordo-eps, jamais d'un `USING (true)` (§9.1.2).
 2. **Propriété des saisies** : l'écriture sur une saisie de moyennes est réservée à son auteur. La lecture est ouverte aux membres de l'équipe — c'est indispensable aux statistiques d'établissement.
 3. **Confidentialité du quiz** : les réponses et scores nominatifs ne sortent jamais sous forme individuelle. Seule la moyenne d'établissement et le nombre de répondants sont exposés. Voir §9.4.2 pour le seuil minimal de répondants.
+
+### 2.4 Point d'entrée et restriction d'accès — **[DÉCISION VALIDÉE]**
+
+#### 2.4.1 Emplacement dans coordo-eps
+
+Le module est accessible **depuis le menu « Outils » de coordo-eps, exactement comme la fonctionnalité « Schéma »**.
+
+C'est une contrainte d'intégration, pas une suggestion : le motif d'intégration de « Schéma » (entrée de menu, déclaration de route, structure de page, contrôle d'accès, conventions d'interface) sert de **modèle de référence**. Toute divergence par rapport à ce motif doit être justifiée.
+
+Conséquence pratique : le module n'est **pas** une section de premier niveau de coordo-eps. Il n'apparaît pas dans la navigation principale, ne modifie pas le tableau de bord de l'hôte, et ne s'impose à aucun utilisateur qui ne le cherche pas.
+
+#### 2.4.2 Phase 1 — accès restreint à un seul compte
+
+Tant que le module n'est pas jugé complet et correct, il est accessible **à un seul compte**, celui du propriétaire du produit :
+
+> **Compte autorisé en phase 1 : `delorenzo.lionel@orange.fr`**
+> ⚠️ **À confirmer** — adresse transmise sous la forme `delorenzo.Lionel@orange.f`. L'extension `.fr` et la casse sont des reconstitutions. Voir §2.4.5.
+
+Pendant cette phase :
+
+| Pour le compte autorisé | Pour tous les autres comptes |
+|---|---|
+| L'entrée « EPS Égalité » apparaît dans le menu Outils | **Aucune entrée de menu** |
+| Toutes les routes du module sont accessibles | **Toutes les routes répondent comme inexistantes** |
+| Toutes les données du module sont lisibles et modifiables | **Aucune ligne d'aucune table du module n'est lisible** |
+| Le module fonctionne intégralement | coordo-eps est **strictement identique** à aujourd'hui |
+
+#### 2.4.3 Trois exigences non négociables
+
+**① Le contrôle est appliqué à trois niveaux, pas un seul.**
+
+Masquer l'entrée de menu ne protège rien : les routes restent atteignables par quiconque connaît ou devine l'URL, et les tables restent interrogeables par l'API de données.
+
+| Niveau | Effet attendu si le compte n'est pas autorisé |
+|---|---|
+| **Interface** | L'entrée de menu n'est pas rendue |
+| **Route / serveur** | L'accès direct à l'URL renvoie une page inexistante ou une redirection — **pas** un message « accès refusé » qui révélerait l'existence du module |
+| **Base de données (RLS)** | Chaque politique du module intègre la condition d'autorisation. Aucune ligne n'est lisible, même avec un jeton valide |
+
+La couche base de données est la seule réellement contraignante. Les deux autres relèvent du confort et de la discrétion.
+
+**② Un point de contrôle unique.**
+
+L'autorisation est évaluée par **une seule fonction**, appelée partout. Le jour de l'ouverture à tous, une seule ligne change. Si la condition est recopiée à quinze endroits, l'ouverture sera un chantier et il restera des oublis.
+
+**③ La liste n'est pas figée dans le code.**
+
+L'adresse autorisée est stockée en base (table `egalite_parametres` ou équivalent) ou en variable d'environnement — **jamais en dur dans un composant**. Élargir l'accès à un premier collègue testeur doit être une opération de données, pas un déploiement.
+
+#### 2.4.4 Phase 2 — ouverture
+
+L'ouverture progressive est prévue dès la conception, en trois crans, du plus restrictif au plus ouvert :
+
+| Cran | Accès | Mise en œuvre attendue |
+|---|---|---|
+| **1 — Actuel** | Un compte nominatif | Liste d'adresses autorisées |
+| **2 — Bêta** | Quelques établissements pilotes | Activation par établissement ou par équipe |
+| **3 — Général** | Tous les utilisateurs | Le point de contrôle retourne systématiquement vrai, ou le drapeau est retiré |
+
+**[RECO]** : concevoir le point de contrôle **dès le lot 1** pour qu'il sache déjà répondre aux trois crans. Un contrôle qui ne sait faire que « cette adresse ou rien » devra être réécrit deux fois.
+
+**Le modèle de droits de §2.3 reste la cible.** En phase 1, il n'a simplement pas d'effet observable, puisqu'un seul compte accède au module. Il doit malgré tout être implémenté dès le départ : le découvrir au cran 2, avec de vraies données d'équipe, serait une reprise coûteuse.
+
+#### 2.4.5 ⚠️ Deux points à confirmer avant écriture du code
+
+1. **L'adresse exacte.** Telle que transmise, `delorenzo.Lionel@orange.f` comporte une extension à une lettre et une majuscule. La reconstitution retenue est `delorenzo.lionel@orange.fr`. **Une erreur d'un caractère sur cette valeur bloque l'accès au seul compte autorisé.**
+2. **Le compte de connexion réel.** L'adresse d'exploitation connue par ailleurs est `lionel.delorenzo@teachtech.fr`. Si le compte coordo-eps est ouvert sous cette adresse et non sous l'adresse Orange, c'est celle-ci qu'il faut autoriser — ou les deux.
+
+**[RECO]** : normaliser en minuscules des deux côtés de la comparaison, et prévoir une **liste** d'adresses dès le départ plutôt qu'une valeur unique. Le surcoût est nul, et cela couvre les deux cas ci-dessus sans arbitrage.
+
+---
 
 ---
 
@@ -2180,6 +2254,8 @@ Tout ce qui suit existe déjà dans coordo-eps et doit être consommé, pas réi
 | **6** | La notion d'**année scolaire** existe-t-elle, et sous quel format ? | Aligner le module sur le format de l'hôte. Ne pas introduire un second format. |
 | **7** | Existe-t-il plusieurs **équipes** par établissement ? | Trancher le niveau de rattachement (§7.5.3, point 3). |
 | **8** | Existe-t-il un **mécanisme d'activation par module** (feature flag) ? | À créer — c'est une exigence du cahier des charges d'intégration. |
+| **9** | Comment la fonctionnalité **« Schéma » est-elle intégrée au menu Outils** ? | **Question prioritaire** : ce motif d'intégration est imposé comme modèle (§2.4.1). |
+| **10** | Comment identifier l'utilisateur courant par son **adresse e-mail**, côté serveur et dans une politique RLS ? | Conditionne la restriction d'accès de phase 1 (§2.4.2). |
 
 ### 8.4 Arbitrage — à qui appartiennent les données du module ?
 
@@ -2598,10 +2674,22 @@ Tout membre peut supprimer la programmation commune de toute l'équipe, sans tra
 **États vides**
 - [ ] Aucune APSA · aucune classe affectée · aucune évaluation · aucun quiz · aucune programmation — chacun affiche un message d'action, pas un écran blanc ni un zéro trompeur
 
+**Point d'entrée et restriction d'accès** *(§2.4)*
+- [ ] L'entrée « EPS Égalité » figure dans le **menu Outils**, au même niveau que « Schéma »
+- [ ] Connecté avec le compte autorisé : l'entrée apparaît et le module fonctionne
+- [ ] Connecté avec **tout autre compte** : l'entrée n'apparaît pas
+- [ ] Tout autre compte, **accès direct par l'URL** : page inexistante ou redirection, sans révéler l'existence du module
+- [ ] Tout autre compte, **interrogation directe des tables du module** : aucune ligne retournée
+- [ ] Non connecté : aucun accès, aucune donnée
+- [ ] L'adresse autorisée est **modifiable sans déploiement**
+- [ ] L'autorisation est évaluée par **un seul point de contrôle**, identifiable dans le code
+
 **Non-régression de l'hôte**
 - [ ] Module désactivé : aucun changement visible dans coordo-eps
 - [ ] Aucune table existante modifiée sans justification écrite
 - [ ] Aucune migration destructive
+- [ ] Le menu Outils se comporte à l'identique pour un compte non autorisé
+- [ ] La fonctionnalité « Schéma » est inchangée dans son comportement et ses performances
 
 ### Annexe D — Scénario de bout en bout
 

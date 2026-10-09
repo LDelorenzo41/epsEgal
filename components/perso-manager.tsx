@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/lib/supabase/client"
+import { getCurrentSchoolYear, getSchoolYearOptions } from "@/lib/school-year"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 
 type Class = {
@@ -71,6 +72,17 @@ const PERIOD_OPTIONS = [
   { value: "Semestre 2", label: "Semestre 2" },
 ]
 
+const getEmptyActivityForm = () => ({
+  id: "",
+  teacher_class_id: "",
+  apsa_id: "",
+  period: "",
+  school_year: getCurrentSchoolYear(),
+  avg_score_total: "",
+  avg_score_girls: "",
+  avg_score_boys: "",
+})
+
 export function PersoManager({
   teacherId,
   initialTeacherClasses,
@@ -89,16 +101,7 @@ export function PersoManager({
   // Activities state
   const [activities, setActivities] = useState<ClassActivity[]>(initialActivities)
   const [showActivityForm, setShowActivityForm] = useState(false)
-  const [activityForm, setActivityForm] = useState({
-    id: "",
-    teacher_class_id: "",
-    apsa_id: "",
-    period: "",
-    school_year: "2025-26",
-    avg_score_total: "",
-    avg_score_girls: "",
-    avg_score_boys: "",
-  })
+  const [activityForm, setActivityForm] = useState(getEmptyActivityForm)
 
   // ===== TEACHER CLASSES CRUD =====
 
@@ -151,7 +154,7 @@ export function PersoManager({
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: "Impossible d'ajouter la classe",
+        description: `Impossible d'ajouter la classe : ${error.message}`,
       })
       return
     }
@@ -171,7 +174,7 @@ export function PersoManager({
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: "Impossible de retirer la classe",
+        description: `Impossible de retirer la classe : ${error.message}`,
       })
       return
     }
@@ -196,7 +199,7 @@ export function PersoManager({
       teacher_class_id: activityForm.teacher_class_id,
       apsa_id: activityForm.apsa_id,
       period: activityForm.period || null,
-      school_year: activityForm.school_year || "2025-26",
+      school_year: activityForm.school_year || getCurrentSchoolYear(),
       avg_score_total: activityForm.avg_score_total
         ? parseFloat(activityForm.avg_score_total)
         : null,
@@ -219,7 +222,7 @@ export function PersoManager({
         toast({
           variant: "destructive",
           title: "Erreur",
-          description: "Impossible de modifier l'activité",
+          description: `Impossible de modifier l'activité : ${error.message}`,
         })
         return
       }
@@ -273,7 +276,7 @@ export function PersoManager({
         toast({
           variant: "destructive",
           title: "Erreur",
-          description: "Impossible de créer l'activité",
+          description: `Impossible de créer l'activité : ${error.message}`,
         })
         return
       }
@@ -283,16 +286,7 @@ export function PersoManager({
     }
 
     setShowActivityForm(false)
-    setActivityForm({
-      id: "",
-      teacher_class_id: "",
-      apsa_id: "",
-      period: "",
-      school_year: "2025-26",
-      avg_score_total: "",
-      avg_score_girls: "",
-      avg_score_boys: "",
-    })
+    setActivityForm(getEmptyActivityForm())
   }
 
   const handleEditActivity = (activity: ClassActivity) => {
@@ -301,7 +295,7 @@ export function PersoManager({
       teacher_class_id: activity.teacher_class_id,
       apsa_id: activity.apsa_id,
       period: activity.period || "",
-      school_year: activity.school_year || "2025-26",
+      school_year: activity.school_year || getCurrentSchoolYear(),
       avg_score_total: activity.avg_score_total?.toString() || "",
       avg_score_girls: activity.avg_score_girls?.toString() || "",
       avg_score_boys: activity.avg_score_boys?.toString() || "",
@@ -318,7 +312,7 @@ export function PersoManager({
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: "Impossible de supprimer l'activité",
+        description: `Impossible de supprimer l'activité : ${error.message}`,
       })
       return
     }
@@ -329,22 +323,21 @@ export function PersoManager({
 
   const handleCancelActivity = () => {
     setShowActivityForm(false)
-    setActivityForm({
-      id: "",
-      teacher_class_id: "",
-      apsa_id: "",
-      period: "",
-      school_year: "2025-26",
-      avg_score_total: "",
-      avg_score_girls: "",
-      avg_score_boys: "",
-    })
+    setActivityForm(getEmptyActivityForm())
   }
 
   // Get classes not yet assigned to teacher
   const unassignedClasses = availableClasses.filter(
     (c) => !teacherClasses.some((tc) => tc.class_id === c.id)
   )
+
+  // Années proposées (+ celle de l'activité modifiée si elle n'en fait pas partie)
+  const currentSchoolYear = getCurrentSchoolYear()
+  const schoolYearOptions = getSchoolYearOptions()
+  if (activityForm.school_year && !schoolYearOptions.includes(activityForm.school_year)) {
+    schoolYearOptions.push(activityForm.school_year)
+    schoolYearOptions.sort()
+  }
 
   return (
     <div className="space-y-8">
@@ -444,7 +437,7 @@ export function PersoManager({
       {/* ACTIVITIES */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <CardTitle>Mes Activités / Programmation</CardTitle>
               <CardDescription>
@@ -453,16 +446,7 @@ export function PersoManager({
             </div>
             <Button
               onClick={() => {
-                setActivityForm({
-                  id: "",
-                  teacher_class_id: "",
-                  apsa_id: "",
-                  period: "",
-                  school_year: "2025-26",
-                  avg_score_total: "",
-                  avg_score_girls: "",
-                  avg_score_boys: "",
-                })
+                setActivityForm(getEmptyActivityForm())
                 setShowActivityForm(true)
               }}
               disabled={teacherClasses.length === 0}
@@ -485,7 +469,7 @@ export function PersoManager({
                 {activityForm.id ? "Modifier" : "Ajouter"} une activité
               </h3>
               <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="activity-class">Classe *</Label>
                     <Select
@@ -529,7 +513,7 @@ export function PersoManager({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="activity-period">Période</Label>
                     <Select
@@ -563,16 +547,18 @@ export function PersoManager({
                         <SelectValue placeholder="Sélectionner l'année" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="2023-24">2023-24</SelectItem>
-                        <SelectItem value="2024-25">2024-25</SelectItem>
-                        <SelectItem value="2025-26">2025-26 (actuelle)</SelectItem>
-                        <SelectItem value="2026-27">2026-27</SelectItem>
+                        {schoolYearOptions.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                            {year === currentSchoolYear && " (actuelle)"}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="avg-total">Moyenne générale</Label>
                     <Input
@@ -630,7 +616,7 @@ export function PersoManager({
             <div className="space-y-3">
               {activities.map((activity) => (
                 <div key={activity.id} className="border rounded-lg p-4 bg-white">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                     <div>
                       <div className="font-semibold text-lg">{activity.apsa?.name}</div>
                       <div className="text-sm text-blue-600">
@@ -640,10 +626,10 @@ export function PersoManager({
                         Classe: {activity.teacher_classes?.classes?.name}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {activity.period && (
-                        <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded">
-                          {activity.period}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(activity.period || activity.school_year) && (
+                        <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded whitespace-nowrap">
+                          {[activity.period, activity.school_year].filter(Boolean).join(" · ")}
                         </div>
                       )}
                       <Button

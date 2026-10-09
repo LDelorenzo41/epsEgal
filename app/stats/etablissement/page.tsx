@@ -10,6 +10,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { SchoolYearSelector } from "@/components/school-year-selector"
+import { getCurrentSchoolYear } from "@/lib/school-year"
 import { LabelInfoModal } from "@/components/label-info-modal"
 import { AlertTriangle } from "lucide-react"
 
@@ -37,7 +38,7 @@ export default function StatsEtablissementPage() {
   })
   const [chartData, setChartData] = useState([])
   const [pieChartData, setPieChartData] = useState([])
-  const [schoolYear, setSchoolYear] = useState("2025-26")
+  const [schoolYear, setSchoolYear] = useState(getCurrentSchoolYear)
 
   const [establishmentType, setEstablishmentType] = useState(null)
   const [quizStats, setQuizStats] = useState(null)

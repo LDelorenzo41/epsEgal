@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { getCurrentSchoolYear } from "@/lib/school-year"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -100,18 +101,6 @@ const LEVEL_INFO: Record<number, { label: string; description: string; color: st
     color: "text-green-600",
     bgColor: "bg-green-100"
   }
-}
-
-function getCurrentSchoolYear(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
-  
-  // Format court: 2024-25 (pour correspondre au reste de l'application)
-  if (month >= 9) {
-    return `${year}-${(year + 1).toString().slice(2)}`
-  }
-  return `${year - 1}-${year.toString().slice(2)}`
 }
 
 interface VigilanceQuizProps {

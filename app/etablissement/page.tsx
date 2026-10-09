@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast"
 import { Plus, Pencil, Trash2, Users, Info } from "lucide-react"
 import { SchoolYearSelector } from "@/components/school-year-selector"
+import { getCurrentSchoolYear } from "@/lib/school-year"
 
 const ESTABLISHMENT_TYPES = {
   college: "Collège",
@@ -30,7 +31,7 @@ export default function EtablissementPage() {
   const [apsas, setApsas] = useState([])
   const [apsaClasses, setApsaClasses] = useState([])
   const [loading, setLoading] = useState(true)
-  const [schoolYear, setSchoolYear] = useState("2025-26")
+  const [schoolYear, setSchoolYear] = useState(getCurrentSchoolYear)
 
   // Forms state
   const [showLevelForm, setShowLevelForm] = useState(false)
@@ -281,7 +282,16 @@ export default function EtablissementPage() {
 
   // APSA
   const handleSaveApsa = async () => {
-    if (!apsaForm.cp_id || !apsaForm.name || !profile?.establishment_id) return
+    if (!profile?.establishment_id) return
+
+    if (!apsaForm.cp_id || !apsaForm.name) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Veuillez choisir une compétence propre et saisir le nom de l'APSA",
+      })
+      return
+    }
 
     try {
       const data = {
@@ -809,14 +819,14 @@ export default function EtablissementPage() {
           <TabsContent value="apsa">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <CardTitle>APSA</CardTitle>
                     <CardDescription>
                       Activités Physiques Sportives et Artistiques - Année {schoolYear}
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-4">
                     <SchoolYearSelector value={schoolYear} onChange={setSchoolYear} />
                     <Button
                       onClick={() => {
@@ -863,6 +873,11 @@ export default function EtablissementPage() {
                                 {cp.code} - {cp.label}
                               </SelectItem>
                             ))}
+                            {cps.length === 0 && (
+                              <div className="px-2 py-1.5 text-sm text-gray-500">
+                                Aucune compétence propre disponible
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>

@@ -3,6 +3,7 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { getCurrentSchoolYear, getSchoolYearOptions } from "@/lib/school-year"
 
 type Props = {
   value: string
@@ -10,24 +11,11 @@ type Props = {
 }
 
 export function SchoolYearSelector({ value, onChange }: Props) {
-  const currentYear = new Date().getFullYear()
-  const currentMonth = new Date().getMonth()
-  
-  // Année scolaire commence en septembre (mois 8)
-  const currentSchoolYear = currentMonth >= 8 
-    ? `${currentYear}-${(currentYear + 1).toString().slice(2)}`
-    : `${currentYear - 1}-${currentYear.toString().slice(2)}`
-
-  // Générer les 5 dernières années scolaires
-  const schoolYears = []
-  for (let i = 2; i >= -2; i--) {
-    const startYear = currentYear - i
-    const endYear = startYear + 1
-    schoolYears.push(`${startYear}-${endYear.toString().slice(2)}`)
-  }
+  const currentSchoolYear = getCurrentSchoolYear()
+  const schoolYears = getSchoolYearOptions()
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <Label htmlFor="school-year" className="whitespace-nowrap font-semibold">
         Année scolaire :
       </Label>

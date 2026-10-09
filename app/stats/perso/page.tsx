@@ -11,6 +11,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts"
 import { SchoolYearSelector } from "@/components/school-year-selector"
+import { getCurrentSchoolYear } from "@/lib/school-year"
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
 
@@ -30,7 +31,7 @@ export default function StatsPersoPage() {
   const [chartData, setChartData] = useState([])
   const [trendData, setTrendData] = useState([])
   const [pieData, setPieData] = useState([])
-  const [schoolYear, setSchoolYear] = useState("2025-26")
+  const [schoolYear, setSchoolYear] = useState(getCurrentSchoolYear)
 
 
 

@@ -435,7 +435,7 @@ establishmentApsaClasses.forEach(ac => {
       <NavBar />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Statistiques Établissement
@@ -444,7 +444,7 @@ establishmentApsaClasses.forEach(ac => {
               {profile?.establishments?.name} - {typeConfig.name} (CP1 à CP{typeConfig.cpCount})
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <SchoolYearSelector value={schoolYear} onChange={setSchoolYear} />
             <Link href="/stats/perso">
               <Button variant="outline">Voir mes stats perso</Button>
@@ -741,7 +741,7 @@ establishmentApsaClasses.forEach(ac => {
 
                     return (
                       <div key={cpCode} className="border rounded-lg p-4 bg-white">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
                           <div className="flex-1">
                             <div className="font-semibold text-lg text-blue-600">
                               {cpCode}

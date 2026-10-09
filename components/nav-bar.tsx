@@ -91,10 +91,11 @@ export function NavBar() {
                 variant="ghost"
                 size="sm"
                 className="gap-2"
+                aria-label="Suite d'outils"
                 onClick={() => setToolsMenuOpen(!toolsMenuOpen)}
               >
                 <Wrench className="h-4 w-4" />
-                Suite d'outils
+                <span className="hidden sm:inline">Suite d'outils</span>
                 <ChevronDown className={`h-4 w-4 transition-transform ${toolsMenuOpen ? 'rotate-180' : ''}`} />
               </Button>
 

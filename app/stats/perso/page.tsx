@@ -247,7 +247,7 @@ export default function StatsPersoPage() {
       <NavBar />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Statistiques Personnelles
@@ -256,7 +256,7 @@ export default function StatsPersoPage() {
               Analyse de vos données d'égalité Filles/Garçons (Collège - CP1 à CP4)
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <SchoolYearSelector value={schoolYear} onChange={setSchoolYear} />
             <Link href="/stats/etablissement">
               <Button variant="outline">
@@ -439,14 +439,14 @@ export default function StatsPersoPage() {
               <TabsContent value="by-apsa">
                 <Card>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
                       <div>
                         <CardTitle>Écarts Filles/Garçons par APSA</CardTitle>
                         <CardDescription>
                           Différence de moyennes pour chaque activité
                         </CardDescription>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -496,7 +496,7 @@ export default function StatsPersoPage() {
                         return (
                           <div
                             key={activity.id}
-                            className="flex items-center justify-between p-4 border rounded-lg bg-white"
+                            className="flex flex-wrap items-center justify-between gap-4 p-4 border rounded-lg bg-white"
                           >
                             <div className="flex-1">
                               <div className="font-semibold">
@@ -506,7 +506,7 @@ export default function StatsPersoPage() {
                                 {activity.apsa?.cp?.code} -{" "}
                                 {activity.teacher_classes?.classes?.name}
                                 {activity.period && (
-                                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded whitespace-nowrap">
                                     {activity.period}
                                   </span>
                                 )}
